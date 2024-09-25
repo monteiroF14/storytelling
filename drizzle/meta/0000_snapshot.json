@@ -1,25 +1,18 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0194d9fe-2b63-4366-8be1-5bfca6f1c3cd",
+  "id": "3ed41b19-84d0-41ac-ae6f-1abf6ffcd631",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
-    "story": {
-      "name": "story",
+    "storyline": {
+      "name": "storyline",
       "columns": {
         "id": {
           "name": "id",
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "autoincrement": true
         },
         "title": {
           "name": "title",
@@ -28,12 +21,27 @@
           "notNull": true,
           "autoincrement": false
         },
-        "content": {
-          "name": "content",
+        "steps": {
+          "name": "steps",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
+        },
+        "total_steps": {
+          "name": "total_steps",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": "'ongoing'"
         },
         "created": {
           "name": "created",
@@ -53,21 +61,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "story_user_id_user_id_fk": {
-          "name": "story_user_id_user_id_fk",
-          "tableFrom": "story",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -79,6 +73,13 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
+          "autoincrement": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "username": {
@@ -88,33 +89,45 @@
           "notNull": false,
           "autoincrement": false
         },
-        "created": {
-          "name": "created",
-          "type": "text",
+        "current_storyline_id": {
+          "name": "current_storyline_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "CURRENT_TIMESTAMP"
+          "notNull": false,
+          "autoincrement": false
         },
-        "updated": {
-          "name": "updated",
+        "current_storyline_step": {
+          "name": "current_storyline_step",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "completed_storylines": {
+          "name": "completed_storylines",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "'[]'"
         }
       },
-      "indexes": {
-        "user_username_unique": {
-          "name": "user_username_unique",
-          "columns": [
-            "username"
+      "indexes": {},
+      "foreignKeys": {
+        "user_current_storyline_id_storyline_id_fk": {
+          "name": "user_current_storyline_id_storyline_id_fk",
+          "tableFrom": "user",
+          "tableTo": "storyline",
+          "columnsFrom": [
+            "current_storyline_id"
           ],
-          "isUnique": true
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
-      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     }
