@@ -9,7 +9,7 @@ export async function logger({
 	message: string;
 	type: "SUCCESS" | "ERROR" | "WARNING";
 }) {
-	const LOG_PATH = `${LOG_DIR}/storytelling.log`;
+	const LOG_PATH = `${LOG_DIR}/server.log`;
 
 	const now = new Date();
 	const formattedDate = now.toLocaleString("en-GB", {
