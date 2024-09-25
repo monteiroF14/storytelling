@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { Hono } from "hono";
 import { logger } from "./logger";
-import { storylineService } from "./storyline-service";
+import { storylineService } from "./services/storyline-service";
 import type { Storyline } from "./types";
 
 const app = new Hono();

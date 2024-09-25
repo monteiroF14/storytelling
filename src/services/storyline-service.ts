@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import { storyline } from "./db/schema";
-import { logger } from "./logger";
-import type { Storyline } from "./types";
-import { db } from "./db";
+import { storyline } from "../db/schema";
+import { logger } from "../logger";
+import type { Storyline } from "../types";
+import { db } from "../db";
 
 class StorylineService {
 	async update({ storylineId, steps }: { storylineId: number; steps: Storyline["steps"] }) {

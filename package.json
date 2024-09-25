@@ -1,11 +1,11 @@
 {
 	"name": "storytelling",
-	"module": "index.ts",
+	"module": "./src/index.ts",
 	"type": "module",
 	"scripts": {
-		"dev": "bun run --watch index.ts",
+		"dev": "bun run --watch ./src/index.ts",
 		"lint": "eslint --fix .",
-		"db:migrate": "bun run ./db/migrate.ts"
+		"db:migrate": "bun run ./src/db/migrate.ts"
 	},
 	"devDependencies": {
 		"@types/bun": "latest",
