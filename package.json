@@ -1,0 +1,26 @@
+{
+	"name": "storytelling",
+	"module": "index.ts",
+	"type": "module",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "bun run --workspace @storytelling/server dev & bun run --workspace @storytelling/interface dev",
+		"dev:ui": "bun run --cwd packages/interface dev",
+		"dev:bo": "bun run --cwd packages/server dev",
+		"lint:server": "bun run --cwd packages/server lint"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/eslint": "^9.6.0",
+		"eslint": "^9.11.1",
+		"typescript-eslint": "^8.0.0"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	},
+	"trustedDependencies": [
+		"svelte-preprocess"
+	]
+}
