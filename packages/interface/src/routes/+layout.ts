@@ -2,6 +2,8 @@ import { currentStoryline, storylines, wsConnected } from "$lib/stores";
 import { WebSocketClient } from "$lib/web-socket-client";
 import { get } from "svelte/store";
 import type { LayoutLoad } from "./$types";
+import { goto } from "$app/navigation";
+import { browser } from "$app/environment";
 
 let wsClient: WebSocketClient;
 
@@ -61,6 +63,8 @@ export const load: LayoutLoad = ({ url }) => {
 						);
 						if (storyline) {
 							currentStoryline.set(storyline);
+						} else if (browser) {
+							goto("/", { replaceState: true });
 						}
 					}
 				} catch (e) {
