@@ -19,8 +19,7 @@
 	import { Progressbar } from "flowbite-svelte";
 	import { sineOut } from "svelte/easing";
 	import type { TextOutput } from "window.ai";
-	import AbandonStorylineButton from "./AbandonStorylineButton.svelte";
-	import CongratulationsModal from "./CongratulationsModal.svelte";
+	import { CongratulationsModal } from "$lib/components";
 
 	let wsClient: WebSocketClient;
 	let storyline: Storyline;
@@ -203,7 +202,6 @@
 <header class="w-full flex gap-2 items-center">
 	<h2 class="text-4xl font-bold text-red-600">{$currentStoryline.title}</h2>
 	{#if $currentStoryline.status === "ongoing"}
-		<AbandonStorylineButton {handleAbandonStoryline} />
 		<div class="ml-auto font-semibold flex items-start text-zinc-950">
 			<p class="text-2xl text-zinc-600">
 				{$currentStoryline.steps.length}/
