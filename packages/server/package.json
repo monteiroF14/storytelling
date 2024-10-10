@@ -1,10 +1,10 @@
 {
 	"name": "@storytelling/server",
 	"version": "1.0.0",
-	"module": "./src/index.ts",
+	"module": "./src/server.ts",
 	"type": "module",
 	"scripts": {
-		"dev": "bun run --watch ./src/index.ts",
+		"dev": "bun run --watch ./src/server.ts",
 		"lint": "eslint --fix .",
 		"db:migrate": "drizzle-kit migrate",
 		"db:generate": "drizzle-kit generate",
@@ -18,14 +18,18 @@
 		"@libsql/client": "^0.14.0",
 		"@types/bun": "latest",
 		"@types/jsonwebtoken": "^9.0.7",
+		"@types/uuid": "^10.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.7.0",
+		"axios": "^1.7.7",
 		"chalk": "^5.3.0",
 		"drizzle-kit": "^0.24.2",
 		"drizzle-orm": "^0.33.0",
 		"eslint-plugin-unused-imports": "^4.1.4",
 		"googleapis": "^144.0.0",
 		"hono": "^4.6.3",
-		"jsonwebtoken": "^9.0.2"
+		"jsonwebtoken": "^9.0.2",
+		"uuid": "^10.0.0",
+		"zod": "^3.23.8"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"

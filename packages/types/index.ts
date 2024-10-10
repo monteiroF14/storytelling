@@ -9,15 +9,18 @@ export interface GeneratedStep {
 	choices: string[];
 }
 
-// Represents a storyline with steps, each offering two choices
-export interface Storyline {
-	id: number; // Unique ID for each storyline
-	title: string; // Storyline title or name
-	steps: Step[]; // Array of steps, each with choices
-	totalSteps: number | null; // Total number of steps in the storyline (e.g., 12)
-	status: string; // Storyline status (e.g., completed, ongoing, abandoned)
-	created: string; // Creation date of the storyline
-	updated: string; // Last update date of the storyline
+export interface CreateStoryline {
+	title: string;
+	userId: number;
+}
+
+export interface Storyline extends CreateStoryline {
+	id: number;
+	steps: Step[];
+	totalSteps: number | null;
+	status: string;
+	created: number;
+	updated: number;
 }
 
 // Represents a user playing the game
@@ -27,5 +30,15 @@ export interface User {
 	username: string; // Username
 	currentStorylineId: number | null; // The ID of the currently active storyline (if any)
 	currentStorylineStep: number | null; // The current step the user is on in the active storyline
-	completedStorylines: number[]; // Array of completed storyline IDs
+	completedStorylines: string | number[] | null; // Array of completed storyline IDs
+	refreshToken: string | null;
+}
+
+export type UserRole = "APPLICATION_USER" | "SUPER_USER";
+
+export interface JwtPayload {
+	id: string;
+	email: string;
+	role: UserRole;
+	expiration?: string;
 }

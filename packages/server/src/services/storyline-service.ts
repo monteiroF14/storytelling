@@ -2,17 +2,21 @@ import { eq } from "drizzle-orm";
 import { storyline } from "../db/schema";
 import { logger } from "../logger";
 import { db } from "../db";
-import type { Storyline } from "@storytelling/types";
+import type { CreateStoryline, Storyline } from "@storytelling/types";
 
 class StorylineService {
-	async update({ storylineId, steps }: { storylineId: number; steps: Storyline["steps"] }) {
+	async update({ storyline: newStoryline }: { storyline: Storyline }) {
 		try {
-			await db
+			return await db
 				.update(storyline)
 				.set({
-					steps: JSON.stringify(steps),
+					...newStoryline,
+					steps: JSON.stringify(newStoryline.steps),
+					updated: Date.now(),
 				})
-				.where(eq(storyline.id, storylineId));
+				.where(eq(storyline.id, newStoryline.id))
+				.returning()
+				.get();
 		} catch (e) {
 			logger({
 				message: e instanceof Error ? e.message : "error while updating storyline",
@@ -21,11 +25,11 @@ class StorylineService {
 		}
 	}
 
-	async create(newStoryline: Storyline) {
+	async create({ title, userId }: CreateStoryline) {
 		try {
 			await db.insert(storyline).values({
-				...newStoryline,
-				steps: JSON.stringify(newStoryline.steps),
+				title,
+				userId,
 			});
 		} catch (e) {
 			logger({
@@ -50,6 +54,23 @@ class StorylineService {
 		} catch (e) {
 			logger({
 				message: e instanceof Error ? e.message : "error while reading storyline",
+				type: "ERROR",
+			});
+		}
+	}
+
+	async getUserStorylines({ userId }: { userId: number }): Promise<Storyline[] | undefined> {
+		try {
+			const result = await db.select().from(storyline).where(eq(storyline.userId, userId)).all();
+			if (!result) return;
+
+			return result.map((storyline) => ({
+				...storyline,
+				steps: JSON.parse(storyline.steps) as Storyline["steps"],
+			}));
+		} catch (e) {
+			logger({
+				message: e instanceof Error ? e.message : "error while fetching user storylines",
 				type: "ERROR",
 			});
 		}
