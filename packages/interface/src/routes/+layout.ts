@@ -1,72 +1,35 @@
-import { currentStoryline, storylines, wsConnected } from "$lib/stores";
+import { storylines } from "$lib/stores";
 import { WebSocketClient } from "$lib/web-socket-client";
 import { get } from "svelte/store";
 import type { LayoutLoad } from "./$types";
-import { goto } from "$app/navigation";
-import { browser } from "$app/environment";
 
-let wsClient: WebSocketClient;
+let wsClient: WebSocketClient | null = null;
 
-try {
-	wsClient = new WebSocketClient("ws://localhost:3000/");
-	wsClient.connect();
-} catch (e) {
-	console.error("Error while connecting to WebSocket:", e);
+function getWebSocketClient(url: string): WebSocketClient {
+	if (!wsClient || !wsClient.isConnected) {
+		wsClient = new WebSocketClient(url);
+		wsClient.connect();
+	}
+	return wsClient;
 }
 
-// Function that returns a promise that resolves when WebSocket is connected
-const waitForWebSocket = () => {
-	return new Promise<void>((resolve, reject) => {
-		let hasSettled = false;
-
-		// Set a timeout for the WebSocket connection
-		const timeout = setTimeout(() => {
-			if (!hasSettled) {
-				hasSettled = true;
-				reject(new Error("WebSocket connection timed out"));
-			}
-		}, 10000); // Adjust the timeout duration as needed
-
-		const unsubscribe = wsConnected.subscribe((connected) => {
-			if (connected) {
-				if (!hasSettled) {
-					hasSettled = true;
-					clearTimeout(timeout); // Clear the timeout if resolved
-					resolve();
-					unsubscribe(); // Unsubscribe upon successful connection
-				}
-			} else {
-				// Only reject if we have tried to connect already
-				if (wsClient.retryCount >= wsClient.maxRetries && !hasSettled) {
-					hasSettled = true;
-					clearTimeout(timeout); // Clear the timeout if rejecting
-					reject(new Error("WebSocket connection failed after maximum retries"));
-					unsubscribe(); // Unsubscribe on rejection
-				}
-			}
-		});
-	});
-};
-
-export const load: LayoutLoad = ({ url, data }) => {
-	const storylineId = url.searchParams.get("storyline");
+export const load: LayoutLoad = async ({ data }) => {
+	const wsClient = getWebSocketClient("ws://localhost:3000/");
 
 	return {
 		...data,
 		wsClient,
-		websocketReady: waitForWebSocket()
-			.then(() => {
+		websocketReady: wsClient
+			.waitForConnection()
+			.then(async () => {
 				try {
-					if (storylineId) {
-						const parsedStorylineId = parseInt(storylineId);
-						const storyline = get(storylines).find(
-							(storyline) => storyline.id === parsedStorylineId
+					const isFirstRequest = !get(storylines);
+					if (isFirstRequest && data.user?.id) {
+						wsClient.sendMessage(
+							JSON.stringify({
+								userId: data.user.id,
+							})
 						);
-						if (storyline) {
-							currentStoryline.set(storyline);
-						} else if (browser) {
-							goto("/", { replaceState: true });
-						}
 					}
 				} catch (e) {
 					console.error("Error while fetching storyline:", e);

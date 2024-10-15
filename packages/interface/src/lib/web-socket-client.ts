@@ -1,5 +1,6 @@
 import type { Storyline } from "@storytelling/types";
-import { storylines, wsConnected } from "$lib/stores";
+import { currentStoryline, storylines, wsConnected } from "$lib/stores";
+import { get } from "svelte/store";
 
 export class WebSocketClient {
 	private socket: WebSocket | null = null;
@@ -7,6 +8,7 @@ export class WebSocketClient {
 	private reconnectInterval: number;
 	private _maxRetries: number;
 	private _retryCount = 0;
+	private _isConnected = false;
 
 	constructor(url: string, reconnectInterval = 5000, maxRetries = 10) {
 		this.url = url;
@@ -22,6 +24,7 @@ export class WebSocketClient {
 		this.socket.onopen = () => {
 			console.log("WebSocket connected");
 			this._retryCount = 0; // Reset retry count on successful connection
+			this._isConnected = true;
 		};
 
 		// Message received from server
@@ -33,15 +36,45 @@ export class WebSocketClient {
 		// Handle errors
 		this.socket.onerror = (error) => {
 			console.error("WebSocket error:", error);
+			this._isConnected = false;
 		};
 
 		// Connection closed
 		this.socket.onclose = (event) => {
 			console.warn("WebSocket closed", event);
+			this._isConnected = false;
 			if (!event.wasClean) {
 				this.reconnect(); // Attempt to reconnect on an unclean close
 			}
 		};
+	}
+
+	waitForConnection(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (this._isConnected) {
+				resolve(); // Immediately resolve if already connected
+			}
+
+			const timeout = setTimeout(() => {
+				reject(new Error("WebSocket connection timed out"));
+			}, 10000); // Timeout duration can be adjusted
+
+			const interval = setInterval(() => {
+				if (this._isConnected) {
+					clearTimeout(timeout);
+					clearInterval(interval);
+					resolve();
+				}
+			}, 100);
+
+			if (this.socket) {
+				this.socket.onclose = () => {
+					clearTimeout(timeout);
+					clearInterval(interval);
+					reject(new Error("WebSocket connection was closed"));
+				};
+			}
+		});
 	}
 
 	// Reconnect logic
@@ -82,12 +115,19 @@ export class WebSocketClient {
 				const allStorylines: Storyline[] = response.storylines;
 				storylines.set(allStorylines);
 
-				// const ongoingStoryline = allStorylines
-				// 	.filter((storyline) => storyline.status === "ongoing")
-				// 	.sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())[0]; // Get the latest one
+				// Use window.location to get the current URL
+				const storylineId = new URL(window.location.href).searchParams.get("storyline");
+				if (storylineId) {
+					const parsedStorylineId = parseInt(storylineId);
 
-				// currentStoryline.set(ongoingStoryline);
-				// console.log("current: ", get(currentStoryline));
+					const storyline = get(storylines).find((storyline) => storyline.id === parsedStorylineId);
+					if (storyline) {
+						currentStoryline.set(storyline);
+					} else {
+						// Handle case where storyline is not found (optional)
+						console.warn(`Storyline with ID ${parsedStorylineId} not found.`);
+					}
+				}
 
 				wsConnected.set(true);
 			}
@@ -102,5 +142,9 @@ export class WebSocketClient {
 
 	get maxRetries() {
 		return this._maxRetries;
+	}
+
+	get isConnected() {
+		return this._isConnected;
 	}
 }
