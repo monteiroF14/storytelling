@@ -28,16 +28,14 @@ export interface User {
 	id: number; // User's unique ID
 	email: string; // Email
 	username: string; // Username
-	currentStorylineId: number | null; // The ID of the currently active storyline (if any)
-	currentStorylineStep: number | null; // The current step the user is on in the active storyline
-	completedStorylines: string | number[] | null; // Array of completed storyline IDs
+	picture: string | null;
 	refreshToken: string | null;
 }
 
 export type UserRole = "APPLICATION_USER" | "SUPER_USER";
 
 export interface JwtPayload {
-	id: string;
+	id: number;
 	email: string;
 	role: UserRole;
 	expiration?: string;

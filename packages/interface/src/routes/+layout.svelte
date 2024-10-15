@@ -3,15 +3,23 @@
 	import { goto } from "$app/navigation";
 	import { currentStoryline, storylines, storylineTitleInput } from "$lib/stores";
 	import { formatTimeAgo, getStorylineClass, handleCreateStoryline } from "$lib/util";
-	import { WebSocketClient } from "$lib/web-socket-client";
+	import { Spinner } from "flowbite-svelte";
 	import { WandMagicSparklesOutline } from "flowbite-svelte-icons";
+	import { onMount } from "svelte";
 	import "../app.css";
 	import type { LayoutData } from "./$types";
 
-	import { Spinner } from "flowbite-svelte";
-
 	export let data: LayoutData;
-	const wsClient: WebSocketClient = data.wsClient;
+
+	// ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN
+	onMount(() => {
+		if (data.session) {
+			const token = data.session.token;
+			if (!document.cookie.includes("accessToken")) {
+				document.cookie = `accessToken=${token}; path=/; expires=${new Date(Date.now() + 86400000).toUTCString()}; SameSite=Strict; Secure`;
+			}
+		}
+	});
 
 	if (browser) {
 		import("window.ai");
@@ -48,18 +56,24 @@
 			{/if}
 		</aside>
 		<section class="mx-auto w-3/4">
-			<!-- ! NOT WORKING -->
-			<a
-				href="http://localhost:3000/auth/google/"
-				class="absolute right-0 mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline"
-				>Sign In</a
-			>
+			{#if data.session}
+				<h2
+					class="absolute right-0 mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline"
+					>{data.user?.username}</h2
+				>
+			{:else}
+				<a
+					href="http://localhost:3000/auth/google/"
+					class="absolute right-0 mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline"
+					>Sign In</a
+				>
+			{/if}
 
 			{#if $currentStoryline && $currentStoryline.totalSteps !== null}
 				<slot />
 			{:else}
 				<form
-					on:submit|preventDefault={() => handleCreateStoryline(wsClient)}
+					on:submit|preventDefault={() => handleCreateStoryline(data.wsClient)}
 					class="flex gap-2 py-8"
 				>
 					<input

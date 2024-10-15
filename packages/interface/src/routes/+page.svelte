@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { CongratulationsModal } from "$lib/components";
 	import {
 		CHOICES,
 		MAX_AI_RETRIES,
@@ -11,17 +12,16 @@
 		aiResponseLoading,
 		currentStoryline,
 		storylines,
-		storylineTitleInput,
 	} from "$lib/stores";
 	import { handleCreateStoryline } from "$lib/util";
-	import { WebSocketClient } from "$lib/web-socket-client";
 	import type { Storyline } from "@storytelling/types";
 	import { Progressbar } from "flowbite-svelte";
 	import { sineOut } from "svelte/easing";
 	import type { TextOutput } from "window.ai";
-	import { CongratulationsModal } from "$lib/components";
+	import type { PageData } from "./$types";
 
-	let wsClient: WebSocketClient;
+	export let data: PageData;
+
 	let storyline: Storyline;
 
 	let aiRetryCount = 0;
@@ -183,20 +183,7 @@
 		);
 	}
 
-	async function handleAbandonStoryline() {
-		wsClient.sendMessage(
-			JSON.stringify({
-				userId: 1,
-				storyline: {
-					...$currentStoryline,
-					status: "abandoned",
-				},
-			})
-		);
-		storylineTitleInput.set("");
-	}
-
-	const handleCreateStorylineWrapper = () => handleCreateStoryline(wsClient);
+	const handleCreateStorylineWrapper = () => handleCreateStoryline(data.wsClient);
 </script>
 
 <header class="w-full flex gap-2 items-center">
@@ -212,9 +199,7 @@
 </header>
 
 <section class="space-y-8">
-	<!-- Case 1: Storyline is ongoing -->
 	{#if $currentStoryline.status === "ongoing"}
-		<!-- AI Progress and Choices -->
 		{#if $aiResponseLoading}
 			<Progressbar
 				progress={$aiGeneratingProgress}
@@ -258,8 +243,6 @@
 				<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
 			{/each}
 		</div>
-
-		<!-- Case 2: Storyline is not ongoing but has steps -->
 	{:else if $currentStoryline.steps.length > 0}
 		<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
 		<div class="pb-8">
@@ -271,13 +254,12 @@
 				<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
 			{/each}
 		</div>
-
-		<!-- Case 3: No steps found -->
 	{:else}
-		<h4 class="pt-1 text-lg text-zinc-500 font-semibold">No steps found!</h4>
+		<h4 class="w-full text-3xl text-zinc-500 font-bold flex justify-center py-16"
+			>No steps found!</h4
+		>
 	{/if}
 
-	<!-- Special case: Storyline is ongoing and all steps are complete -->
 	{#if $currentStoryline.status === "ongoing" && $currentStoryline.steps.length === TOTAL_STORYLINE_STEPS}
 		<CongratulationsModal bind:defaultModal handleCreateStoryline={handleCreateStorylineWrapper} />
 	{/if}

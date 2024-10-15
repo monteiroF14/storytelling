@@ -10,9 +10,7 @@ const envSchema = z.object({
 	GOOGLE_CLIENT_SECRET: z.string().min(1),
 
 	// Token expiration times should be numeric strings
-	ACCESS_TOKEN_EXPIRATION: z
-		.string()
-		.regex(/^\d+$/, "Access token expiration must be a numeric string in seconds"),
+	ACCESS_TOKEN_EXPIRATION: z.string(),
 	REFRESH_TOKEN_EXPIRATION: z
 		.string()
 		.regex(/^\d+$/, "Refresh token expiration must be a numeric string in seconds"),

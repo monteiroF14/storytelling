@@ -48,10 +48,11 @@ const waitForWebSocket = () => {
 	});
 };
 
-export const load: LayoutLoad = ({ url }) => {
+export const load: LayoutLoad = ({ url, data }) => {
 	const storylineId = url.searchParams.get("storyline");
 
 	return {
+		...data,
 		wsClient,
 		websocketReady: waitForWebSocket()
 			.then(() => {
