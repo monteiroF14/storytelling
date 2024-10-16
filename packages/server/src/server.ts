@@ -2,21 +2,20 @@ import chalk from "chalk";
 import { app } from "./api";
 import { logger } from "./logger";
 import { storylineService } from "./services/storyline-service";
-
-// fazer o front e mandar os dados do window AI através de WS
-// escrever o rumo da história na db
-
-// fazer o serviço do user
+import type { Storyline } from "@storytelling/types";
+import { authService } from "./services/auth-service";
 
 // melhorar o sistema de logs
 
-// user é criado no userController ao chamar a rota /auth/callback
-// storyline é criado no front é salvo na DB ao chamar a WS
-// todas as alterações feitas no front é feito no back simultaneamente
-
 const server = Bun.serve<{ authToken: string }>({
 	async fetch(req, server) {
-		const success = server.upgrade(req);
+		const token = new URL(req.url).searchParams.get("token");
+
+		const success = server.upgrade(req, {
+			data: {
+				authToken: token,
+			},
+		});
 
 		if (success) {
 			return undefined;
@@ -27,6 +26,11 @@ const server = Bun.serve<{ authToken: string }>({
 	},
 	websocket: {
 		async open(ws) {
+			if (!ws.data.authToken || !authService.validateToken(ws.data.authToken)) {
+				ws.send(JSON.stringify({ type: "error", message: "Unauthorized" }));
+				ws.close(1008, "Unauthorized");
+			}
+
 			// gets executed when the connection gets established
 			console.log("\n");
 			console.log(chalk.bgYellow("WebSocket successfully established"));
@@ -34,11 +38,6 @@ const server = Bun.serve<{ authToken: string }>({
 				message: "WebSocket connection successfully established",
 				type: "INFO",
 			});
-
-			const userStorylines = await storylineService.getUserStorylines({ userId: 1 });
-			console.log("storylines from user 1:", userStorylines);
-
-			ws.send(JSON.stringify({ type: "success", storylines: userStorylines }));
 		},
 		close() {
 			// gets executed when the connection is closed
@@ -51,8 +50,6 @@ const server = Bun.serve<{ authToken: string }>({
 		},
 		async message(ws, message) {
 			// handles the logic for the storyline
-			console.log("ws - got: ", message);
-
 			// handles what comes from the client
 			if (Buffer.isBuffer(message)) {
 				console.log("Received binary data. Closing WebSocket.");
@@ -61,34 +58,39 @@ const server = Bun.serve<{ authToken: string }>({
 			}
 
 			try {
-				const { userId, storyline } = JSON.parse(message);
-				if (!userId || !storyline)
-					ws.send(JSON.stringify({ type: "error", message: "Invalid properties passed" }));
+				const { userId, storyline }: { userId: number; storyline: Storyline } = JSON.parse(message);
 
-				console.log("got user id: ", userId);
+				if ((!userId && !storyline) || storyline === null) {
+					ws.send(JSON.stringify({ type: "error", message: "Invalid properties passed" }));
+					return;
+				}
+
+				const isFirstRequest = userId && !storyline;
+
+				// ! initial request
+				if (isFirstRequest) {
+					const allStorylines = await storylineService.getUserStorylines({ userId });
+					ws.send(JSON.stringify({ type: "success", storylines: allStorylines }));
+					return;
+				}
 
 				const doesStorylineExist = await storylineService.read({ storylineId: storyline.id });
 
 				if (doesStorylineExist) {
-					console.log("updating storyline ", storyline.id, storyline);
 					const updatedStoryline = await storylineService.update({ storyline });
-					console.log("new: ", updatedStoryline);
-					if (!updatedStoryline) return;
-
-					if (updatedStoryline.status === "abandoned") {
-						await storylineService.create({
-							title: "New storyline",
-							userId,
-						});
+					if (!updatedStoryline) {
+						ws.send(JSON.stringify({ type: "error", message: "Storyline update failed" }));
+						return;
 					}
 				} else {
-					console.log("creating storyline");
-					await storylineService.create(storyline);
+					const newStoryline = await storylineService.create(storyline);
+					if (!newStoryline) {
+						ws.send(JSON.stringify({ type: "error", message: "Storyline create failed" }));
+						return;
+					}
 				}
 
-				const allStorylines = await storylineService.getUserStorylines({ userId: 1 });
-				console.log("returning: ", allStorylines);
-
+				const allStorylines = await storylineService.getUserStorylines({ userId });
 				ws.send(JSON.stringify({ type: "success", storylines: allStorylines }));
 			} catch (e) {
 				const message = e instanceof Error ? e.message : "Invalid JSON format";

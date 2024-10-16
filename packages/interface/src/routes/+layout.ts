@@ -14,7 +14,18 @@ function getWebSocketClient(url: string): WebSocketClient {
 }
 
 export const load: LayoutLoad = async ({ data }) => {
-	const wsClient = getWebSocketClient("ws://localhost:3000/");
+	const token = data.session?.token;
+
+	if (!token) {
+		// Gracefully handle missing token
+		console.error("Token missing. Cannot establish WebSocket connection.");
+		return {
+			...data,
+			error: "Missing token. Please log in.",
+		};
+	}
+
+	const wsClient = getWebSocketClient(`ws://localhost:3000/?token=${data.session?.token}`);
 
 	return {
 		...data,
@@ -33,6 +44,7 @@ export const load: LayoutLoad = async ({ data }) => {
 					}
 				} catch (e) {
 					console.error("Error while fetching storyline:", e);
+					return { error: "Failed to connect to the WebSocket. Please check your token." };
 				}
 			})
 			.catch((error) => {

@@ -1,6 +1,7 @@
 import type { Storyline } from "@storytelling/types";
 import { currentStoryline, storylines, wsConnected } from "$lib/stores";
 import { get } from "svelte/store";
+import { browser } from "$app/environment";
 
 export class WebSocketClient {
 	private socket: WebSocket | null = null;
@@ -116,20 +117,24 @@ export class WebSocketClient {
 				storylines.set(allStorylines);
 
 				// Use window.location to get the current URL
-				const storylineId = new URL(window.location.href).searchParams.get("storyline");
-				if (storylineId) {
-					const parsedStorylineId = parseInt(storylineId);
+				if (browser) {
+					const storylineId = new URL(window.location.href).searchParams.get("storyline");
+					if (storylineId) {
+						const parsedStorylineId = parseInt(storylineId);
 
-					const storyline = get(storylines).find((storyline) => storyline.id === parsedStorylineId);
-					if (storyline) {
-						currentStoryline.set(storyline);
-					} else {
-						// Handle case where storyline is not found (optional)
-						console.warn(`Storyline with ID ${parsedStorylineId} not found.`);
+						const storyline = get(storylines).find(
+							(storyline) => storyline.id === parsedStorylineId
+						);
+						if (storyline) {
+							currentStoryline.set(storyline);
+						} else {
+							// Handle case where storyline is not found (optional)
+							console.warn(`Storyline with ID ${parsedStorylineId} not found.`);
+						}
 					}
-				}
 
-				wsConnected.set(true);
+					wsConnected.set(true);
+				}
 			}
 		} catch (e) {
 			console.error(e);

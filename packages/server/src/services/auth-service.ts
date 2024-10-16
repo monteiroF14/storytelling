@@ -73,7 +73,7 @@ export class AuthService {
 		return await getUserInfoAsync();
 	}
 
-	async validateToken(token: string): Promise<boolean> {
+	async validateOAuthToken(token: string): Promise<boolean> {
 		const client = new google.auth.OAuth2(this.googleConfig.clientId);
 
 		try {
@@ -91,6 +91,16 @@ export class AuthService {
 			return true;
 		} catch (err) {
 			throw new Error(err + "");
+		}
+	}
+
+	async validateToken(token: string): Promise<boolean> {
+		try {
+			jwt.verify(token, process.env.JWT_SECRET!);
+			return true;
+		} catch (error) {
+			console.error("Token validation error:", error);
+			return false;
 		}
 	}
 }
