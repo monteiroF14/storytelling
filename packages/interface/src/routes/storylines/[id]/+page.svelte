@@ -16,7 +16,13 @@
 	} from "$lib/stores";
 	import { formatTimeAgo } from "$lib/util";
 	import { CloseButton, Drawer, Progressbar } from "flowbite-svelte";
-	import { ArrowsRepeatOutline, RefreshOutline } from "flowbite-svelte-icons";
+	import {
+		ArrowsRepeatOutline,
+		RefreshOutline,
+		CheckCircleOutline,
+		ExclamationCircleOutline,
+		AngleRightOutline,
+	} from "flowbite-svelte-icons";
 	import { sineIn, sineOut } from "svelte/easing";
 	import type { TextOutput } from "window.ai";
 	import type { PageData } from "./$types";
@@ -24,6 +30,7 @@
 	export let data: PageData;
 
 	let hidden = true;
+
 	let transitionParams = {
 		x: -320,
 		duration: 200,
@@ -185,7 +192,6 @@
 					description: $aiResponse?.description || "",
 				},
 			],
-			updated: Date.now(),
 		};
 
 		await $page.data.wsClient?.sendMessage({
@@ -226,25 +232,47 @@
 		{transitionParams}
 		bind:hidden
 		id="sidebar"
-		width="sm:w-[20%] md:w-[25%] w-[75%]"
+		bgOpacity="bg-opacity-50"
+		bgColor="bg-story-600"
+		width="sm:w-[20%] md:w-[30%] w-[75%]"
+		divClass="p-8 overflow-y-auto z-50 bg-white dark:bg-gray-800 space-y-4 shadow-2xl"
 	>
-		<div class="flex items-center">
-			<h2 class="text-xl lg:text-2xl font-bold text-black">Select storyline:</h2>
-			<CloseButton on:click={() => (hidden = true)} class="mb-4 dark:text-white" />
-		</div>
+		<h2 class="text-xl lg:text-2xl font-bold text-black">Select storyline:</h2>
 		<section class="w-full space-y-4 pt-4">
 			{#if $storylines}
-				{#each $storylines.slice().sort((a, b) => b.updated - a.updated) as storyline}
-					<button
-						on:click={() => {
-							currentStoryline.set(storyline);
-							goto(`/storylines/${storyline.id}`, { replaceState: true });
-						}}
-						class="relative w-full p-2 rounded-xl bg-opacity-70 text-black first:mt-0 flex flex-col gap-1 text-left border-2 transition duration-200 ease-in-out hover:bg-opacity-60 text-sm"
+				{#each $storylines
+					.filter((storyline) => storyline.id !== $currentStoryline.id)
+					.slice()
+					.sort((a, b) => a.updated - b.updated) as storyline}
+					<article
+						class=" bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition duration-200"
 					>
-						<p class="font-semibold text-lg z-10 line-clamp-1 overflow-hidden">{storyline.title}</p>
-						<p class="z-10">{formatTimeAgo(storyline.created)}</p>
-					</button>
+						<button
+							on:click={() => {
+								currentStoryline.set(storyline);
+								goto(`/storylines/${$currentStoryline.id}`, { replaceState: true });
+							}}
+							class="p-4 w-full h-full text-left space-y-2"
+						>
+							<h3 class="font-semibold text-xl line-clamp-2">{storyline.title}</h3>
+							<p class="text-gray-600">{formatTimeAgo(storyline.created)}</p>
+							<section class="flex items-center justify-between w-full">
+								<p class="flex items-center">
+									{#if storyline.status === "completed"}
+										<CheckCircleOutline class="w-5 h-5 text-green-500 mr-1" />
+										<span class="text-green-500 font-bold">{storyline.status}</span>
+									{:else}
+										<ExclamationCircleOutline class="w-5 h-5 text-yellow-500 mr-1" />
+										<span class="text-yellow-500 font-bold">{storyline.status}</span>
+									{/if}
+								</p>
+								<p>
+									<span class="font-bold">{storyline.steps.length}</span> /
+									<span class="font-bold">{storyline.totalSteps || "∞"}</span>
+								</p>
+							</section>
+						</button>
+					</article>
 				{/each}
 			{/if}
 		</section>
@@ -270,7 +298,7 @@
 
 					<h3 class="text-2xl font-semibold">Make a choice:</h3>
 
-					<div class="grid grid-cols-3 gap-4">
+					<div class="grid grid-cols-3 gap-4 cursor-pointer">
 						{#each $aiResponse.choices as choice}
 							<button
 								on:click={() => handleUserChoice(choice)}
@@ -308,11 +336,13 @@
 			<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
 			<div class="pb-8">
 				{#each storyline.steps.slice().reverse() as storyStep}
-					<p class="py-2">{storyStep.description}</p>
-					<p class="py-2">
-						You previously chose: <span class="font-semibold">{storyStep.choice}</span>
-					</p>
-					<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
+					<div class="space-y-2">
+						<p class="py-2 text-left">{storyStep.description}</p>
+						<p class="py-2 text-left">
+							You previously chose: <span class="font-semibold">{storyStep.choice}</span>
+						</p>
+					</div>
+					<hr class="my-4 border-1 border-gray-200 last-of-type:hidden" />
 				{/each}
 			</div>
 		{:else}
