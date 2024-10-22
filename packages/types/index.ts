@@ -1,42 +1,72 @@
-// Represents each step in the storyline
-export interface Step {
-	description: string; // Text describing the plot at this step
-	choice: string;
-}
+import { z } from "zod";
 
-export interface GeneratedStep {
-	description: string;
-	choices: string[];
-}
+export const StepSchema = z.object({
+  description: z.string(), // Text describing the plot at this step
+  choice: z.string(),
+});
+export type Step = z.infer<typeof StepSchema>;
 
-export interface CreateStoryline {
-	title: string;
-	userId: number;
-}
+export const GeneratedStepSchema = z.object({
+  description: z.string(),
+  choices: z.array(z.string()),
+});
+export type GeneratedStep = z.infer<typeof GeneratedStepSchema>;
 
-export interface Storyline extends CreateStoryline {
-	id: number;
-	steps: Step[];
-	totalSteps: number | null;
-	status: string;
-	created: number;
-	updated: number;
-}
+export const CreateStorylineSchema = z.object({
+  title: z.string(),
+  totalSteps: z.number().nullable(),
+});
+export type CreateStoryline = z.infer<typeof CreateStorylineSchema>;
+
+const StorylineSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  totalSteps: z.number().nullable(),
+  userId: z.number(),
+  status: z.enum(["ongoing", "completed"]),
+  steps: z.array(StepSchema).default([]),
+  created: z.number(),
+  updated: z.number(),
+});
+export type Storyline = z.infer<typeof StorylineSchema>;
 
 // Represents a user playing the game
-export interface User {
-	id: number; // User's unique ID
-	email: string; // Email
-	username: string; // Username
-	picture: string | null;
-	refreshToken: string | null;
-}
+export const UserSchema = z.object({
+  id: z.number(),
+  email: z.string().email(),
+  username: z.string(),
+  picture: z.string().nullable(),
+  refreshToken: z.string().nullable(),
+});
+export type User = z.infer<typeof UserSchema>;
 
 export type UserRole = "APPLICATION_USER" | "SUPER_USER";
 
-export interface JwtPayload {
-	id: number;
-	email: string;
-	role: UserRole;
-	expiration?: string;
-}
+export const JwtPayloadSchema = z.object({
+  id: z.number(),
+  email: z.string().email(),
+  role: z.enum(["APPLICATION_USER", "SUPER_USER"]),
+  expiration: z.string().optional(),
+});
+export type JwtPayload = z.infer<typeof JwtPayloadSchema>;
+
+export const WebSocketMessagePayloadSchema = z.object({
+  messageType: z.enum(["create", "fetch", "edit", "retrieve"]),
+  data: z.object({
+    userId: z.number().positive({ message: "Invalid user ID" }),
+    storyline: z.union([StorylineSchema, CreateStorylineSchema]).optional(),
+  }),
+});
+export type WebSocketMessagePayload = z.infer<
+  typeof WebSocketMessagePayloadSchema
+>;
+
+export const WebSocketMessageResponseSchema = z.object({
+  type: z.enum(["error", "success"]),
+  storylines: z.array(StorylineSchema).optional(),
+  storyline: StorylineSchema.optional(),
+});
+
+export type WebSocketMessageResponse = z.infer<
+  typeof WebSocketMessageResponseSchema
+>;

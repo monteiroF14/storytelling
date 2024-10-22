@@ -1,7 +1,5 @@
-import { session, user } from "$lib/stores";
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { get } from "svelte/store";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
@@ -11,7 +9,6 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 	if (token) {
 		try {
 			const sessionVerify = jwt.verify(token, import.meta.env.VITE_JWT_SECRET!);
-			session.set(sessionVerify);
 
 			// Set cookie expiration once (when token is initially set, not on every load)
 			if (!cookies.get("accessToken")) {
@@ -32,14 +29,12 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 				},
 			});
 
-			user.set(data.user);
-
 			return {
 				session: {
 					token,
 					sessionVerify,
 				},
-				user: get(user),
+				user: data.user,
 			};
 		} catch (err) {
 			console.error("Failed to verify token or fetch user data:", err);

@@ -37,7 +37,7 @@
 					status: "completed",
 				});
 			}}
-			class="bg-red-600 text-white hover:bg-red-500 rounded-2xl shadow transition duration-200 p-4"
+			class="bg-story-500 text-white hover:bg-story-500 rounded-2xl shadow transition duration-200 p-4"
 		>
 			Create new storyline
 		</Button>

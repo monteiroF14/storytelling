@@ -1,17 +1,18 @@
 <script lang="ts">
-	import { browser } from "$app/environment";
-	import { goto } from "$app/navigation";
-	import { currentStoryline, storylines, storylineTitleInput } from "$lib/stores";
-	import { formatTimeAgo, getStorylineClass, handleCreateStoryline } from "$lib/util";
-	import { Spinner } from "flowbite-svelte";
-	import { WandMagicSparklesOutline } from "flowbite-svelte-icons";
+	import { Spinner, Tooltip } from "flowbite-svelte";
+	import { ArrowLeftToBracketOutline, PlusOutline } from "flowbite-svelte-icons";
 	import { onMount } from "svelte";
-	import "../app.css";
 	import type { LayoutData } from "./$types";
+	import "../app.css";
+	import { browser } from "$app/environment";
+
+	if (browser) {
+		import("window.ai");
+	}
 
 	export let data: LayoutData;
 
-	// ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN
+	/* ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN */
 	onMount(() => {
 		if (data.session) {
 			const token = data.session.token;
@@ -21,74 +22,51 @@
 		}
 	});
 
-	if (browser) {
-		import("window.ai");
-	}
+	const handleSignOut = () =>
+		(document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;");
 </script>
 
-<div
-	class="h-screen w-screen bg-gradient-to-r from-orange-600 to-yellow-600 backdrop-blur-lg opacity-20 absolute inset-0 -z-10"
-	aria-label="overlay"
-></div>
-{#await data.websocketReady}
-	<div class="w-full h-screen flex items-center justify-center text-2xl font-semibold">
-		<Spinner color="red" bg="text-red-300" size={16} />
-	</div>
-{:then}
-	<main
-		class="flex w-full h-full my-12 gap-8 lg:gap-12 px-4 md:px-12 xl:px-0 xl:w-4/5 mx-auto flex-col sm:flex-row"
-	>
-		<aside class="w-1/4 space-y-4">
-			{#if $storylines}
-				<h2 class="text-2xl lg:text-3xl font-bold text-black">Your storylines:</h2>
-				{#each $storylines.slice().sort((a, b) => b.updated - a.updated) as storyline}
-					<button
-						on:click={() => {
-							currentStoryline.set(storyline);
-							goto(`/?storyline=${$currentStoryline.id}`, { replaceState: true });
-						}}
-						class={getStorylineClass(storyline.status)}
-					>
-						<p class="font-semibold text-lg z-10 line-clamp-2 overflow-hidden">{storyline.title}</p>
-						<p class="z-10">{formatTimeAgo(storyline.created)}</p>
-					</button>
-				{/each}
-			{/if}
-		</aside>
-		<section class="mx-auto w-3/4">
-			{#if data.session}
-				<h2
-					class="absolute right-0 mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline"
-					>{data.user?.username}</h2
-				>
-			{:else}
-				<a
-					href="http://localhost:3000/auth/google/"
-					class="absolute right-0 mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline"
-					>Sign In</a
-				>
-			{/if}
+<header
+	class="flex items-center py-8 xl:w-4/5 mx-auto w-full px-4 md:px-12 xl:px-0 border-b-2 border-zinc-600 border-opacity-10 gap-8"
+>
+	<nav class="flex gap-8 grow font-semibold items-center text-xl lowercase">
+		<a class="hover:text-story-600" href="/">storylines</a>
+		<a class="hover:text-story-600" href="/#">Play</a>
+	</nav>
 
-			{#if $currentStoryline && $currentStoryline.totalSteps !== null}
-				<slot />
-			{:else}
-				<form
-					on:submit|preventDefault={() => handleCreateStoryline(data.wsClient)}
-					class="flex gap-2 py-8"
-				>
-					<input
-						type="text"
-						class="text-4xl font-bold px-2 focus:underline focus:border-none focus:outline-none bg-transparent border-none"
-						placeholder="storyline title.."
-						bind:value={$storylineTitleInput}
-					/>
-					<button class="p-4">
-						<WandMagicSparklesOutline ariaLabel="generate storyline" size="xl" />
-					</button>
-				</form>
-			{/if}
+	<div>
+		<a href="/storylines/new" class="p-2 bg-story-500 text-white rounded-full inline-block">
+			<PlusOutline size="lg" />
+		</a>
+		<Tooltip placement="bottom">New storyline</Tooltip>
+	</div>
+
+	{#if data.session}
+		<button
+			class="px-4 py-2 rounded-full font-semibold text-xl"
+			on:click={handleSignOut}
+			title="Sign Out"><ArrowLeftToBracketOutline size="xl" /></button
+		>
+		<Tooltip placement="bottom">Sign Out</Tooltip>
+	{:else}
+		<a
+			href="http://localhost:3000/auth/google/"
+			class="mr-6 mt-6 px-4 py-2 rounded-full font-semibold text-2xl underline">Sign In</a
+		>
+	{/if}
+</header>
+<main
+	class="flex w-full my-10 gap-8 lg:gap-12 px-4 md:px-12 xl:px-0 xl:w-4/5 mx-auto flex-col sm:flex-row"
+>
+	{#await data.websocketReady}
+		<div class="w-full h-screen flex items-center justify-center text-2xl font-semibold">
+			<Spinner color="yellow" bg="text-story-300" size={16} />
+		</div>
+	{:then}
+		<section class="mx-auto w-full">
+			<slot />
 		</section>
-	</main>
-{:catch error}
-	<p>Error loading storylines: {error.message}</p>
-{/await}
+	{:catch error}
+		<p>Error loading storylines: {error.message}</p>
+	{/await}
+</main>

@@ -1,7 +1,9 @@
-import type { Storyline } from "@storytelling/types";
-import { currentStoryline, storylines, wsConnected } from "$lib/stores";
-import { get } from "svelte/store";
-import { browser } from "$app/environment";
+import { storylines } from "$lib/stores";
+import type {
+	Storyline,
+	WebSocketMessagePayload,
+	WebSocketMessageResponse,
+} from "@storytelling/types";
 
 export class WebSocketClient {
 	private socket: WebSocket | null = null;
@@ -92,12 +94,27 @@ export class WebSocketClient {
 	}
 
 	// Send a message to the server
-	sendMessage(message: string) {
-		if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-			this.socket.send(message);
-		} else {
-			console.warn("WebSocket not open. Cannot send message.");
-		}
+	sendMessage(message: WebSocketMessagePayload): Promise<WebSocketMessageResponse> {
+		return new Promise((resolve, reject) => {
+			if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+				this.socket.send(JSON.stringify(message));
+
+				const handleResponse = (event: MessageEvent) => {
+					const response = JSON.parse(event.data);
+					if (response.type === "success") {
+						resolve(response as WebSocketMessageResponse);
+					} else if (response.type === "error") {
+						reject(new Error(response.message));
+					}
+					// Remove this event listener after handling the message
+					this.socket?.removeEventListener("message", handleResponse);
+				};
+
+				this.socket.addEventListener("message", handleResponse);
+			} else {
+				reject(new Error("WebSocket not open. Cannot send message."));
+			}
+		});
 	}
 
 	// Close the WebSocket connection
@@ -113,27 +130,11 @@ export class WebSocketClient {
 
 			if (response.type === "error") throw new Error("error handling message");
 			if (response.type === "success") {
-				const allStorylines: Storyline[] = response.storylines;
-				storylines.set(allStorylines);
-
-				// Use window.location to get the current URL
-				if (browser) {
-					const storylineId = new URL(window.location.href).searchParams.get("storyline");
-					if (storylineId) {
-						const parsedStorylineId = parseInt(storylineId);
-
-						const storyline = get(storylines).find(
-							(storyline) => storyline.id === parsedStorylineId
-						);
-						if (storyline) {
-							currentStoryline.set(storyline);
-						} else {
-							// Handle case where storyline is not found (optional)
-							console.warn(`Storyline with ID ${parsedStorylineId} not found.`);
-						}
-					}
-
-					wsConnected.set(true);
+				if (response.storylines) {
+					const allStorylines: Storyline[] = response.storylines;
+					storylines.set(allStorylines);
+				} else if (response.storyline) {
+					return;
 				}
 			}
 		} catch (e) {

@@ -1,6 +1,7 @@
 import { storylines } from "$lib/stores";
 import { WebSocketClient } from "$lib/web-socket-client";
 import { get } from "svelte/store";
+import { browser } from "$app/environment";
 import type { LayoutLoad } from "./$types";
 
 let wsClient: WebSocketClient | null = null;
@@ -13,11 +14,14 @@ function getWebSocketClient(url: string): WebSocketClient {
 	return wsClient;
 }
 
-export const load: LayoutLoad = async ({ data }) => {
-	const token = data.session?.token;
-
-	if (!token) {
+export const load: LayoutLoad = ({ data }) => {
+	// const token = data.session?.token;
+	// ! fix this
+	if (data.session === null) {
 		// Gracefully handle missing token
+		if (browser) {
+			window.location.href = "http://localhost:3000/auth/google/";
+		}
 		console.error("Token missing. Cannot establish WebSocket connection.");
 		return {
 			...data,
@@ -32,19 +36,22 @@ export const load: LayoutLoad = async ({ data }) => {
 		wsClient,
 		websocketReady: wsClient
 			.waitForConnection()
-			.then(async () => {
+			.then(() => {
 				try {
 					const isFirstRequest = !get(storylines);
 					if (isFirstRequest && data.user?.id) {
-						wsClient.sendMessage(
-							JSON.stringify({
+						wsClient.sendMessage({
+							messageType: "fetch",
+							data: {
 								userId: data.user.id,
-							})
-						);
+							},
+						});
 					}
 				} catch (e) {
 					console.error("Error while fetching storyline:", e);
-					return { error: "Failed to connect to the WebSocket. Please check your token." };
+					return {
+						error: "Failed to connect to the WebSocket. Please check your token.",
+					};
 				}
 			})
 			.catch((error) => {

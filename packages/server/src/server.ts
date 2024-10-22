@@ -2,13 +2,18 @@ import chalk from "chalk";
 import { app } from "./api";
 import { logger } from "./logger";
 import { storylineService } from "./services/storyline-service";
-import type { Storyline } from "@storytelling/types";
+import {
+	type CreateStoryline,
+	type Storyline,
+	WebSocketMessagePayloadSchema,
+} from "@storytelling/types";
 import { authService } from "./services/auth-service";
+import { z } from "zod";
 
 // melhorar o sistema de logs
 
 const server = Bun.serve<{ authToken: string }>({
-	async fetch(req, server) {
+	fetch(req, server) {
 		const token = new URL(req.url).searchParams.get("token");
 
 		const success = server.upgrade(req, {
@@ -25,7 +30,7 @@ const server = Bun.serve<{ authToken: string }>({
 		return app.fetch(req);
 	},
 	websocket: {
-		async open(ws) {
+		open(ws) {
 			if (!ws.data.authToken || !authService.validateToken(ws.data.authToken)) {
 				ws.send(JSON.stringify({ type: "error", message: "Unauthorized" }));
 				ws.close(1008, "Unauthorized");
@@ -49,8 +54,6 @@ const server = Bun.serve<{ authToken: string }>({
 			});
 		},
 		async message(ws, message) {
-			// handles the logic for the storyline
-			// handles what comes from the client
 			if (Buffer.isBuffer(message)) {
 				console.log("Received binary data. Closing WebSocket.");
 				ws.close();
@@ -58,49 +61,103 @@ const server = Bun.serve<{ authToken: string }>({
 			}
 
 			try {
-				const { userId, storyline }: { userId: number; storyline: Storyline } = JSON.parse(message);
+				const {
+					messageType,
+					data: { storyline, userId },
+				} = WebSocketMessagePayloadSchema.parse(JSON.parse(message));
 
-				if ((!userId && !storyline) || storyline === null) {
-					ws.send(JSON.stringify({ type: "error", message: "Invalid properties passed" }));
-					return;
+				if (messageType !== "fetch" && !storyline) {
+					throw new Error("Tried to mutate storyline data without a storyline");
 				}
 
-				const isFirstRequest = userId && !storyline;
+				const isStoryline = (storyline: Storyline | CreateStoryline): storyline is Storyline => {
+					return (storyline as Storyline).id !== undefined;
+				};
 
-				// ! initial request
-				if (isFirstRequest) {
-					const allStorylines = await storylineService.getUserStorylines({ userId });
-					ws.send(JSON.stringify({ type: "success", storylines: allStorylines }));
-					return;
-				}
+				let assertedStoryline: Storyline | CreateStoryline | undefined;
 
-				const doesStorylineExist = await storylineService.read({ storylineId: storyline.id });
-
-				if (doesStorylineExist) {
-					const updatedStoryline = await storylineService.update({ storyline });
-					if (!updatedStoryline) {
-						ws.send(JSON.stringify({ type: "error", message: "Storyline update failed" }));
-						return;
+				if (messageType !== "fetch") {
+					if (!storyline) {
+						throw new Error("Tried to mutate storyline data without a storyline");
 					}
-				} else {
-					const newStoryline = await storylineService.create(storyline);
-					if (!newStoryline) {
-						ws.send(JSON.stringify({ type: "error", message: "Storyline create failed" }));
-						return;
+
+					assertedStoryline = storyline;
+
+					if (messageType === "create") {
+						if (!isStoryline(storyline)) {
+							assertedStoryline = assertedStoryline as CreateStoryline;
+						}
+					} else if (isStoryline(assertedStoryline)) {
+						console.log("This is a full storyline", assertedStoryline);
+					} else {
+						throw new Error("Invalid storyline type");
 					}
 				}
 
-				const allStorylines = await storylineService.getUserStorylines({ userId });
-				ws.send(JSON.stringify({ type: "success", storylines: allStorylines }));
+				switch (messageType) {
+					case "fetch": {
+						const allStorylines = await storylineService.getUserStorylines({
+							userId,
+						});
+						ws.send(JSON.stringify({ type: "success", storylines: allStorylines }));
+						break;
+					}
+					case "retrieve": {
+						if (!assertedStoryline || !isStoryline(assertedStoryline)) {
+							throw new Error("Storyline ID is required for retrieve");
+						}
+						const story = await storylineService.read(assertedStoryline.id);
+						ws.send(JSON.stringify({ type: "success", storyline: story }));
+						break;
+					}
+					case "create": {
+						if (!assertedStoryline) {
+							throw new Error("Storyline and title are required for create");
+						}
+						const newStoryline = await storylineService.create({
+							...assertedStoryline,
+							userId,
+						});
+						ws.send(JSON.stringify({ type: "success", storyline: newStoryline }));
+						break;
+					}
+					case "edit": {
+						if (!assertedStoryline || !isStoryline(assertedStoryline)) {
+							throw new Error("Storyline ID is required for edit");
+						}
+						const updatedStoryline = await storylineService.update({
+							storyline: assertedStoryline,
+						});
+						ws.send(JSON.stringify({ type: "success", storyline: updatedStoryline }));
+						break;
+					}
+					default: {
+						throw new Error("Invalid message type received");
+					}
+				}
 			} catch (e) {
-				const message = e instanceof Error ? e.message : "Invalid JSON format";
-
-				logger({
-					message,
-					type: "ERROR",
-				});
-
-				ws.send(JSON.stringify({ type: "error", message }));
+				if (e instanceof z.ZodError) {
+					const errorDetails = e.errors.map((err) => ({
+						code: err.code,
+						message: err.message,
+						path: err.path,
+					}));
+					logger({
+						message: `Zod validation error, ${errorDetails}`,
+						type: "ERROR",
+					});
+					ws.send(
+						JSON.stringify({
+							type: "error",
+							code: "ZOD_ERROR",
+							errors: errorDetails,
+						})
+					);
+				} else {
+					const errorMessage = e instanceof Error ? e.message : "An error occurred";
+					logger({ message: errorMessage, type: "ERROR" });
+					ws.send(JSON.stringify({ type: "error", message: errorMessage }));
+				}
 			}
 		},
 	},

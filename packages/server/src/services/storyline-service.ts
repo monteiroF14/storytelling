@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { storyline } from "../db/schema";
 import { logger } from "../logger";
 import { db } from "../db";
-import type { CreateStoryline, Storyline } from "@storytelling/types";
+import type { Storyline } from "@storytelling/types";
 
 class StorylineService {
 	async update({ storyline: newStoryline }: { storyline: Storyline }) {
@@ -25,12 +25,23 @@ class StorylineService {
 		}
 	}
 
-	async create({ title, userId }: CreateStoryline) {
+	async create({ title, totalSteps, userId }: Pick<Storyline, "title" | "totalSteps" | "userId">) {
 		try {
-			await db.insert(storyline).values({
-				title,
-				userId,
-			});
+			const result = await db
+				.insert(storyline)
+				.values({
+					title,
+					userId,
+					totalSteps,
+				})
+				.returning()
+				.get();
+
+			if (!result) {
+				return;
+			}
+
+			return result;
 		} catch (e) {
 			logger({
 				message: e instanceof Error ? e.message : "error while creating storyline",
@@ -39,7 +50,7 @@ class StorylineService {
 		}
 	}
 
-	async read({ storylineId }: { storylineId: number }) {
+	async read(storylineId: number) {
 		try {
 			const result = await db.select().from(storyline).where(eq(storyline.id, storylineId)).get();
 

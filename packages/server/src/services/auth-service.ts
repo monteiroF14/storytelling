@@ -94,7 +94,7 @@ export class AuthService {
 		}
 	}
 
-	async validateToken(token: string): Promise<boolean> {
+	validateToken(token: string): boolean {
 		try {
 			jwt.verify(token, process.env.JWT_SECRET!);
 			return true;

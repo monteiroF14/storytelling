@@ -1,5 +1,5 @@
 {
-	"name": "@storytelling/types",
-	"version": "1.0.0",
-	"main": "index.ts"
+  "name": "@storytelling/types",
+  "version": "1.0.0",
+  "main": "index.ts"
 }
