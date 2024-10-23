@@ -18,6 +18,7 @@ export const storyline = sqliteTable("storyline", {
 	steps: text("steps").notNull().default("[]"), // json array with all storyline data
 	totalSteps: integer("total_steps"), // number of steps a storyline has
 	status: text("status").default("ongoing").notNull(),
+	visibility: text("visibility").default("public").notNull(),
 	created: integer("created")
 		.notNull()
 		.default(sql`strftime('%s', 'now')`),
