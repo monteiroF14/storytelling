@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  llama:
+    build:
+      context: .
+      dockerfile: packages/llama/Dockerfile
+    ports:
+      - "5000:5000" # Expose LLaMA API on port 5001
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "3000:3000" # Expose your API on port 5000
+    depends_on:
+      - llama # Ensure llama service starts before the API
+    environment:
+      - LLAMA_URL=http://llama:5000/llama # URL to access the LLaMA service
+    restart: unless-stopped

@@ -5,7 +5,6 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun run --watch ./src/server.ts",
-		"lint": "eslint --fix .",
 		"db:migrate": "drizzle-kit migrate",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit push",
