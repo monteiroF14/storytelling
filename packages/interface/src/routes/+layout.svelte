@@ -1,29 +1,31 @@
 <script lang="ts">
-	import { Spinner, Tooltip } from "flowbite-svelte";
-	import { ArrowLeftToBracketOutline, PlusOutline } from "flowbite-svelte-icons";
-	import { onMount } from "svelte";
-	import type { LayoutData } from "./$types";
-	import "../app.css";
-	import { browser } from "$app/environment";
+import { Spinner, Tooltip } from "flowbite-svelte";
+import { ArrowLeftToBracketOutline, PlusOutline } from "flowbite-svelte-icons";
+import { onMount } from "svelte";
+import type { LayoutData } from "./$types";
+import "../app.css";
+import { browser } from "$app/environment";
 
-	if (browser) {
-		import("window.ai");
-	}
+if (browser) {
+	import("window.ai");
+}
 
-	export let data: LayoutData;
+export let data: LayoutData;
 
-	/* ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN */
-	onMount(() => {
-		if (data.session) {
-			const token = data.session.token;
-			if (!document.cookie.includes("accessToken")) {
-				document.cookie = `accessToken=${token}; path=/; expires=${new Date(Date.now() + 86400000).toUTCString()}; SameSite=Strict; Secure`;
-			}
+/* ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN */
+onMount(() => {
+	if (data.session) {
+		const token = data.session.token;
+		if (!document.cookie.includes("accessToken")) {
+			document.cookie = `accessToken=${token}; path=/; expires=${new Date(Date.now() + 86400000).toUTCString()}; SameSite=Strict; Secure`;
 		}
-	});
+	}
+});
 
-	const handleSignOut = () =>
-		(document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;");
+const handleSignOut = () => {
+	document.cookie =
+		"accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+};
 </script>
 
 <header

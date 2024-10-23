@@ -13,7 +13,10 @@ const envSchema = z.object({
 	ACCESS_TOKEN_EXPIRATION: z.string(),
 	REFRESH_TOKEN_EXPIRATION: z
 		.string()
-		.regex(/^\d+$/, "Refresh token expiration must be a numeric string in seconds"),
+		.regex(
+			/^\d+$/,
+			"Refresh token expiration must be a numeric string in seconds",
+		),
 });
 
 const env = envSchema.safeParse(process.env);

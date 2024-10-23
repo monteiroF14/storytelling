@@ -1,92 +1,93 @@
 <script lang="ts">
-	import { goto } from "$app/navigation";
-	import { page } from "$app/stores";
-	import {
-		CHOICES,
-		MAX_AI_RETRIES,
-		MAX_DESCRIPTION_LENGTH,
-		TOTAL_STORYLINE_STEPS,
-	} from "$lib/constants";
-	import {
-		aiGeneratingProgress,
-		aiResponse,
-		aiResponseLoading,
-		currentStoryline,
-		storylines,
-	} from "$lib/stores";
-	import { formatTimeAgo } from "$lib/util";
-	import { CloseButton, Drawer, Progressbar } from "flowbite-svelte";
-	import {
-		ArrowsRepeatOutline,
-		RefreshOutline,
-		CheckCircleOutline,
-		ExclamationCircleOutline,
-		AngleRightOutline,
-	} from "flowbite-svelte-icons";
-	import { sineIn, sineOut } from "svelte/easing";
-	import type { TextOutput } from "window.ai";
-	import type { PageData } from "./$types";
+import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import {
+	CHOICES,
+	MAX_AI_RETRIES,
+	MAX_DESCRIPTION_LENGTH,
+	TOTAL_STORYLINE_STEPS,
+} from "$lib/constants";
+import {
+	aiGeneratingProgress,
+	aiResponse,
+	aiResponseLoading,
+	currentStoryline,
+	storylines,
+} from "$lib/stores";
+import { formatTimeAgo } from "$lib/util";
+import { CloseButton, Drawer, Progressbar } from "flowbite-svelte";
+import {
+	AngleRightOutline,
+	ArrowsRepeatOutline,
+	CheckCircleOutline,
+	ExclamationCircleOutline,
+	RefreshOutline,
+} from "flowbite-svelte-icons";
+import { sineIn, sineOut } from "svelte/easing";
+import type { TextOutput } from "window.ai";
+import type { PageData } from "./$types";
 
-	export let data: PageData;
+export let data: PageData;
 
-	let hidden = true;
+let hidden = true;
 
-	let transitionParams = {
-		x: -320,
-		duration: 200,
-		easing: sineIn,
-	};
+const transitionParams = {
+	x: -320,
+	duration: 200,
+	easing: sineIn,
+};
 
-	let aiRetryCount = 0;
+let aiRetryCount = 0;
 
-	let defaultModal = false;
+let defaultModal = false;
 
-	// Set store value reactively
-	$: if (data.storyline) {
-		currentStoryline.set(data.storyline);
+let intervalId: NodeJS.Timer;
+
+// Set store value reactively
+$: if (data.storyline) {
+	currentStoryline.set(data.storyline);
+}
+
+$: storyline = data.storyline!;
+
+$: if (
+	storyline &&
+	storyline.status === "ongoing" &&
+	storyline.steps.length < (storyline.totalSteps || TOTAL_STORYLINE_STEPS)
+) {
+	const MAX_PROGRESS = 80;
+
+	aiResponseLoading.set(true);
+	aiGeneratingProgress.set(15);
+
+	intervalId = setInterval(() => {
+		aiGeneratingProgress.update((n) => (n < MAX_PROGRESS ? n + 10 : n));
+	}, 750);
+
+	fetchNextStoryStep().then(() => {
+		aiResponseLoading.set(false);
+		aiGeneratingProgress.set(100);
+		clearInterval(intervalId);
+	});
+}
+
+$: if (storyline && storyline.steps.length === storyline.totalSteps) {
+	defaultModal = true;
+}
+
+async function fetchNextStoryStep() {
+	let prompt = "";
+
+	if (aiRetryCount >= MAX_AI_RETRIES) {
+		// Reset retry count and stop loading after max retries
+		aiResponseLoading.set(false);
+		return;
 	}
 
-	$: storyline = data.storyline!;
+	++aiRetryCount;
 
-	$: if (
-		storyline &&
-		storyline.status === "ongoing" &&
-		storyline.steps.length < (storyline.totalSteps || TOTAL_STORYLINE_STEPS)
-	) {
-		let intervalId: NodeJS.Timer;
-		const MAX_PROGRESS = 80;
-
-		aiResponseLoading.set(true);
-		aiGeneratingProgress.set(15);
-
-		intervalId = setInterval(() => {
-			aiGeneratingProgress.update((n) => (n < MAX_PROGRESS ? n + 10 : n));
-		}, 750);
-
-		fetchNextStoryStep().then(() => {
-			aiResponseLoading.set(false);
-			aiGeneratingProgress.set(100);
-			clearInterval(intervalId);
-		});
-	}
-
-	$: if (storyline && storyline.steps.length === storyline.totalSteps) {
-		defaultModal = true;
-	}
-
-	async function fetchNextStoryStep() {
-		let prompt = "";
-
-		if (aiRetryCount >= MAX_AI_RETRIES) {
-			// Reset retry count and stop loading after max retries
-			aiResponseLoading.set(false);
-			return;
-		}
-
-		++aiRetryCount;
-
-		if (storyline.steps.length === 0) {
-			prompt = `Create a storyline with the theme '${storyline.title}' that progresses through a total of ${TOTAL_STORYLINE_STEPS} steps.
+	if (storyline.steps.length === 0) {
+		prompt = `Create a storyline with the theme '${storyline.title}' that progresses through a total of ${TOTAL_STORYLINE_STEPS} steps.
 			The story should follow a logical flow, with each step building on the previous one and driving the narrative towards a satisfying conclusion in the final step.
 
 			For the first step:
@@ -100,13 +101,15 @@
 	    The string should include:
 	    - 'description' (a concise introduction, no more than ${MAX_DESCRIPTION_LENGTH} characters)
 	    - 'choices' (an array of ${CHOICES} choices the player can make on which the choice is a string, multiple sentences or not).`;
-		} else {
-			const lastStep = storyline.steps[storyline.steps.length - 1];
-			const remainingSteps = TOTAL_STORYLINE_STEPS - storyline.steps.length;
+	} else {
+		const lastStep = storyline.steps[storyline.steps.length - 1];
+		const remainingSteps = TOTAL_STORYLINE_STEPS - storyline.steps.length;
 
-			const storylinePath = storyline.steps.map((step) => step.description).join(". ");
+		const storylinePath = storyline.steps
+			.map((step) => step.description)
+			.join(". ");
 
-			prompt = `Continue the storyline titled "${storyline.title}".
+		prompt = `Continue the storyline titled "${storyline.title}".
 	    The current storyline is as follows: ${storylinePath}. The player previously chose "${lastStep.choice}".
 
 	    Please generate the next step, ensuring that the narrative remains coherent and logically follows from the player's choice and the previous events.
@@ -124,91 +127,110 @@
 	    - "choices" (an array of ${CHOICES} possible player actions on which the choice is a string, multiple sentences or not).
 
 	    **Important**: Do not include any additional text, formatting, or markdown backticks in the response. Only return the plain JSON object.`;
-		}
-
-		try {
-			aiResponseLoading.set(true);
-
-			const response = (await window.ai.generateText({
-				prompt,
-				options: {
-					numOutputs: 2,
-					maxTokens: 500,
-				},
-			})) as TextOutput[];
-
-			if (!response || !Array.isArray(response) || response.length === 0 || !response[0]?.text) {
-				throw new Error("Invalid response from AI");
-			}
-
-			let generatedResponseText = response[0].text;
-
-			// Check if the response contains backticks and clean them if present
-			if (generatedResponseText.includes("```")) {
-				console.warn("Backticks detected, cleaning response...");
-				generatedResponseText = generatedResponseText.replace(/```json|```/g, "").trim();
-			}
-
-			let generatedResponse;
-			try {
-				generatedResponse = JSON.parse(generatedResponseText);
-			} catch (parseError) {
-				throw new Error("Failed to parse AI response: " + (parseError as unknown as Error).message);
-			}
-			let { description, choices } = generatedResponse;
-
-			if (description.length > MAX_DESCRIPTION_LENGTH) {
-				description = description.slice(0, MAX_DESCRIPTION_LENGTH) + "...";
-			}
-
-			aiResponse.set({
-				description: description.trim(),
-				choices: choices.map((choice: string) => choice.trim()),
-			});
-
-			aiRetryCount = 0;
-			aiResponseLoading.set(false);
-		} catch (err) {
-			console.error("Error fetching next story step:", err);
-
-			// Retry if there are retries left, else stop loading and show "No text generated"
-			if (aiRetryCount < MAX_AI_RETRIES) {
-				await fetchNextStoryStep(); // Retry the AI call
-			} else {
-				// Exhausted retries, stop loading and clear response
-				aiResponse.set(undefined);
-				aiResponseLoading.set(false);
-			}
-		}
 	}
 
-	async function handleUserChoice(choice: string) {
-		const updatedStoryline = {
-			...storyline,
-			steps: [
-				...storyline.steps,
-				{
-					choice,
-					description: $aiResponse?.description || "",
-				},
-			],
+	try {
+		aiResponseLoading.set(true);
+
+		const response = (await window.ai.generateText({
+			prompt,
+			options: {
+				numOutputs: 2,
+				maxTokens: 500,
+			},
+		})) as TextOutput[];
+
+		if (
+			!response ||
+			!Array.isArray(response) ||
+			response.length === 0 ||
+			!response[0]?.text
+		) {
+			throw new Error("Invalid response from AI");
+		}
+
+		let generatedResponseText = response[0].text;
+
+		// Check if the response contains backticks and clean them if present
+		if (generatedResponseText.includes("```")) {
+			console.warn("Backticks detected, cleaning response...");
+			generatedResponseText = generatedResponseText
+				.replace(/```json|```/g, "")
+				.trim();
+		}
+
+		type GeneratedResponse = {
+			description: string;
+			choices: string[];
 		};
 
-		await $page.data.wsClient?.sendMessage({
-			messageType: "edit",
-			data: {
-				userId: storyline.userId,
-				storyline: updatedStoryline,
-			},
+		let generatedResponse: GeneratedResponse;
+
+		try {
+			generatedResponse = JSON.parse(
+				generatedResponseText,
+			) as GeneratedResponse;
+		} catch (parseError) {
+			throw new Error(
+				`Failed to parse AI response: ${(parseError as unknown as Error).message}`,
+			);
+		}
+		let { description, choices } = generatedResponse;
+
+		if (description.length > MAX_DESCRIPTION_LENGTH) {
+			description = `${description.slice(0, MAX_DESCRIPTION_LENGTH)}...`;
+		}
+
+		aiResponse.set({
+			description: description.trim(),
+			choices: choices.map((choice: string) => choice.trim()),
 		});
 
-		currentStoryline.set(updatedStoryline);
-		storylines.update((list) =>
-			list.map((story) => (story.id === updatedStoryline.id ? updatedStoryline : story))
-		);
-	}
+		aiRetryCount = 0;
+		aiResponseLoading.set(false);
+	} catch (err) {
+		console.error("Error fetching next story step:", err);
 
-	// const handleCreateStorylineWrapper = () => handleCreateStoryline(data.wsClient!);
+		// Retry if there are retries left, else stop loading and show "No text generated"
+		if (aiRetryCount < MAX_AI_RETRIES) {
+			await fetchNextStoryStep(); // Retry the AI call
+		} else {
+			// Exhausted retries, stop loading and clear response
+			aiResponse.set(undefined);
+			aiResponseLoading.set(false);
+		}
+	}
+}
+
+async function handleUserChoice(choice: string) {
+	const updatedStoryline = {
+		...storyline,
+		steps: [
+			...storyline.steps,
+			{
+				choice,
+				description: $aiResponse?.description || "",
+			},
+		],
+	};
+
+	await $page.data.wsClient?.sendMessage({
+		messageType: "edit",
+		data: {
+			userId: storyline.userId,
+			storyline: updatedStoryline,
+		},
+	});
+
+	currentStoryline.set(updatedStoryline);
+	storylines.update((list) =>
+		list.map((story) =>
+			story.id === updatedStoryline.id ? updatedStoryline : story,
+		),
+	);
+}
+
+// const handleCreateStorylineWrapper = () => handleCreateStoryline(data.wsClient!);
 </script>
 
 {#if storyline && storyline.totalSteps !== null}

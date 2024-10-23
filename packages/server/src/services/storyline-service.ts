@@ -1,8 +1,8 @@
+import type { Storyline } from "@storytelling/types";
 import { eq } from "drizzle-orm";
+import { db } from "../db";
 import { storyline } from "../db/schema";
 import { logger } from "../logger";
-import { db } from "../db";
-import type { Storyline } from "@storytelling/types";
 
 class StorylineService {
 	async update({ storyline: newStoryline }: { storyline: Storyline }) {
@@ -19,13 +19,18 @@ class StorylineService {
 				.get();
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while updating storyline",
+				message:
+					e instanceof Error ? e.message : "error while updating storyline",
 				type: "ERROR",
 			});
 		}
 	}
 
-	async create({ title, totalSteps, userId }: Pick<Storyline, "title" | "totalSteps" | "userId">) {
+	async create({
+		title,
+		totalSteps,
+		userId,
+	}: Pick<Storyline, "title" | "totalSteps" | "userId">) {
 		try {
 			const result = await db
 				.insert(storyline)
@@ -44,7 +49,8 @@ class StorylineService {
 			return result;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while creating storyline",
+				message:
+					e instanceof Error ? e.message : "error while creating storyline",
 				type: "ERROR",
 			});
 		}
@@ -52,7 +58,11 @@ class StorylineService {
 
 	async read(storylineId: number) {
 		try {
-			const result = await db.select().from(storyline).where(eq(storyline.id, storylineId)).get();
+			const result = await db
+				.select()
+				.from(storyline)
+				.where(eq(storyline.id, storylineId))
+				.get();
 
 			if (!result || !result.steps || result.steps === null) {
 				return;
@@ -64,15 +74,22 @@ class StorylineService {
 			} as Storyline;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while reading storyline",
+				message:
+					e instanceof Error ? e.message : "error while reading storyline",
 				type: "ERROR",
 			});
 		}
 	}
 
-	async getUserStorylines({ userId }: { userId: number }): Promise<Storyline[] | undefined> {
+	async getUserStorylines({
+		userId,
+	}: { userId: number }): Promise<Storyline[] | undefined> {
 		try {
-			const result = await db.select().from(storyline).where(eq(storyline.userId, userId)).all();
+			const result = await db
+				.select()
+				.from(storyline)
+				.where(eq(storyline.userId, userId))
+				.all();
 			if (!result) return;
 
 			return result.map((storyline) => ({
@@ -81,7 +98,10 @@ class StorylineService {
 			}));
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while fetching user storylines",
+				message:
+					e instanceof Error
+						? e.message
+						: "error while fetching user storylines",
 				type: "ERROR",
 			});
 		}

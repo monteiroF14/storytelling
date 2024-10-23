@@ -1,11 +1,11 @@
+import type { JwtPayload, User } from "@storytelling/types";
 import type { Context, Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import jwt from "jsonwebtoken";
-import { authService, AuthService } from "../services/auth-service";
-import { UserService, userService } from "../services/user-service";
 import env from "../env";
-import type { JwtPayload, User } from "@storytelling/types";
+import { type AuthService, authService } from "../services/auth-service";
+import { type UserService, userService } from "../services/user-service";
 
 // continue this and make google login work both on front and back
 // make sure the session keeps
@@ -51,7 +51,10 @@ class AuthController {
 
 			c.set("tokens", result);
 		} catch (e) {
-			throw new HTTPException(401, { message: "Failed to get tokens", cause: e });
+			throw new HTTPException(401, {
+				message: "Failed to get tokens",
+				cause: e,
+			});
 		}
 
 		return await next();
@@ -63,17 +66,23 @@ class AuthController {
 			const user = c.get("user") as User;
 
 			const userId = user.id;
-			if (isNaN(userId)) {
+			if (Number.isNaN(userId)) {
 				throw new HTTPException(401, {
 					message: "Failed to get a valid userId in URL",
 				});
 			}
 
-			const refreshTokenFromDb = await this.userService.getUserRefreshToken({ userId });
-			const refreshToken = refreshTokenFromDb ? refreshTokenFromDb : getCookie(c, "refreshToken");
+			const refreshTokenFromDb = await this.userService.getUserRefreshToken({
+				userId,
+			});
+			const refreshToken = refreshTokenFromDb
+				? refreshTokenFromDb
+				: getCookie(c, "refreshToken");
 
 			if (!refreshToken) {
-				throw new HTTPException(401, { message: "Refresh token not provided." });
+				throw new HTTPException(401, {
+					message: "Refresh token not provided.",
+				});
 			}
 
 			const decoded = jwt.verify(refreshToken, env.JWT_SECRET!) as JwtPayload;
@@ -111,8 +120,8 @@ class AuthController {
 					err instanceof HTTPException
 						? err.message
 						: err instanceof Error
-						? err.message
-						: (err as string),
+							? err.message
+							: (err as string),
 			});
 		}
 	};

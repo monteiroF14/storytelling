@@ -1,9 +1,9 @@
 import type { Context, Next } from "hono";
-import { userService, type UserService } from "../services/user-service";
-import { authService, type AuthService } from "../services/auth-service";
-import { z } from "zod";
 import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 import { logger } from "../logger";
+import { type AuthService, authService } from "../services/auth-service";
+import { type UserService, userService } from "../services/user-service";
 
 const GoogleTokensSchema = z.object({
 	access_token: z.string().min(1, { message: "Access token is required" }),
@@ -11,7 +11,10 @@ const GoogleTokensSchema = z.object({
 	scope: z.string().min(1, { message: "Scope is required" }),
 	token_type: z.string().min(1, { message: "Token type is required" }),
 	id_token: z.string().min(1, { message: "ID token is required" }),
-	expiry_date: z.number().int().positive({ message: "Expiry date must be a positive integer" }),
+	expiry_date: z
+		.number()
+		.int()
+		.positive({ message: "Expiry date must be a positive integer" }),
 });
 
 class UserController {
@@ -37,8 +40,16 @@ class UserController {
 			access_token: c.get("tokens").access_token,
 		});
 
-		if (!data || !data.email || !data.name || !data.picture || !data.given_name) {
-			throw new HTTPException(400, { message: "Error while fetching google data" });
+		if (
+			!data ||
+			!data.email ||
+			!data.name ||
+			!data.picture ||
+			!data.given_name
+		) {
+			throw new HTTPException(400, {
+				message: "Error while fetching google data",
+			});
 		}
 
 		const user = await this.userService.exists(data.email);
@@ -83,7 +94,7 @@ class UserController {
 			const userId = c.req.param("id");
 			if (!userId) return await next();
 
-			user = await userService.read(parseInt(userId));
+			user = await userService.read(Number.parseInt(userId));
 
 			return c.json({ user });
 		} catch (e) {

@@ -1,11 +1,11 @@
-import { google } from "googleapis";
+import type { JwtPayload } from "@storytelling/types";
 import type { Credentials } from "google-auth-library";
+import { google } from "googleapis";
 import jwt from "jsonwebtoken";
 import env from "../env";
-import type { JwtPayload } from "@storytelling/types";
 
 export class AuthService {
-	private REDIRECT_URL = env.API_URL + "/auth/google/callback";
+	private REDIRECT_URL = `${env.API_URL}/auth/google/callback`;
 	private redirectUri = this.REDIRECT_URL?.includes(",")
 		? this.REDIRECT_URL.split(",")[1]
 		: this.REDIRECT_URL;
@@ -31,7 +31,7 @@ export class AuthService {
 		return new google.auth.OAuth2(
 			this.googleConfig.clientId,
 			this.googleConfig.clientSecret,
-			this.googleConfig.redirectUri
+			this.googleConfig.redirectUri,
 		);
 	}
 
@@ -44,7 +44,9 @@ export class AuthService {
 	}
 
 	createJwtToken(payload: JwtPayload): string {
-		const options: jwt.SignOptions = payload.expiration ? { expiresIn: payload.expiration } : {};
+		const options: jwt.SignOptions = payload.expiration
+			? { expiresIn: payload.expiration }
+			: {};
 		return jwt.sign(payload, env.JWT_SECRET!, options);
 	}
 
@@ -90,7 +92,7 @@ export class AuthService {
 
 			return true;
 		} catch (err) {
-			throw new Error(err + "");
+			throw new Error(`${err}`);
 		}
 	}
 

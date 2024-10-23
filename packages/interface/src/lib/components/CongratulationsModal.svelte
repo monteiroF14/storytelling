@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { Button, Modal } from "flowbite-svelte";
-	import { currentStoryline } from "$lib/stores";
+import { currentStoryline } from "$lib/stores";
+import { Button, Modal } from "flowbite-svelte";
 
-	export let defaultModal: boolean;
-	export let handleCreateStoryline: () => void;
+export let defaultModal: boolean;
+export let handleCreateStoryline: () => void;
 </script>
 
 <Modal

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
@@ -19,10 +19,6 @@ export const storyline = sqliteTable("storyline", {
 	totalSteps: integer("total_steps"), // number of steps a storyline has
 	status: text("status").default("ongoing").notNull(),
 	visibility: text("visibility").default("public").notNull(),
-	created: integer("created")
-		.notNull()
-		.default(sql`strftime('%s', 'now')`),
-	updated: integer("updated")
-		.notNull()
-		.default(sql`strftime('%s', 'now')`),
+	created: integer("created").notNull().default(sql`unixepoch('now')`),
+	updated: integer("updated").notNull().default(sql`unixepoch('now')`),
 });

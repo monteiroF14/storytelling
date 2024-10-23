@@ -1,13 +1,17 @@
+import type { User } from "@storytelling/types";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { user } from "../db/schema";
 import { logger } from "../logger";
-import type { User } from "@storytelling/types";
 
 export class UserService {
 	async getUserRefreshToken({ userId }: { userId: number }) {
 		try {
-			const result = await db.select().from(user).where(eq(user.id, userId)).get();
+			const result = await db
+				.select()
+				.from(user)
+				.where(eq(user.id, userId))
+				.get();
 
 			if (!result || !result.refreshToken || result.refreshToken === null) {
 				return;
@@ -16,7 +20,10 @@ export class UserService {
 			return result.refreshToken;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while reading user refresh token",
+				message:
+					e instanceof Error
+						? e.message
+						: "error while reading user refresh token",
 				type: "ERROR",
 			});
 		}
@@ -24,11 +31,18 @@ export class UserService {
 
 	async read(userId: number): Promise<User | undefined> {
 		try {
-			const result = await db.select().from(user).where(eq(user.id, userId)).get();
+			const result = await db
+				.select()
+				.from(user)
+				.where(eq(user.id, userId))
+				.get();
 			return result;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "failed to get whether user exists or not",
+				message:
+					e instanceof Error
+						? e.message
+						: "failed to get whether user exists or not",
 				type: "ERROR",
 			});
 			console.error("failed to read user");
@@ -38,11 +52,18 @@ export class UserService {
 
 	async exists(email: string): Promise<User | undefined> {
 		try {
-			const result = await db.select().from(user).where(eq(user.email, email)).get();
+			const result = await db
+				.select()
+				.from(user)
+				.where(eq(user.email, email))
+				.get();
 			return result;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "failed to get whether user exists or not",
+				message:
+					e instanceof Error
+						? e.message
+						: "failed to get whether user exists or not",
 				type: "ERROR",
 			});
 			console.error("failed to read user");
@@ -56,7 +77,11 @@ export class UserService {
 		picture,
 	}: Pick<User, "username" | "email" | "picture">): Promise<User> {
 		try {
-			const result = await db.insert(user).values({ username, email, picture }).returning().get();
+			const result = await db
+				.insert(user)
+				.values({ username, email, picture })
+				.returning()
+				.get();
 			return result;
 		} catch (e) {
 			logger({
@@ -91,7 +116,10 @@ export class UserService {
 			return result;
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while updating user refresh token",
+				message:
+					e instanceof Error
+						? e.message
+						: "error while updating user refresh token",
 				type: "ERROR",
 			});
 			throw e;

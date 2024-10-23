@@ -1,63 +1,63 @@
 <script lang="ts">
-	import {
-		WandMagicSparklesOutline,
-		CloseCircleSolid,
-		InfoCircleSolid,
-	} from "flowbite-svelte-icons";
-	import { storylineTitleInput, currentStoryline } from "$lib/stores";
-	import { goto } from "$app/navigation";
-	import { Alert } from "flowbite-svelte";
-	import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
-	import { fade, slide } from "svelte/transition";
-	import { quintOut } from "svelte/easing";
-	import { page } from "$app/stores";
-	import type { User } from "@storytelling/types";
-	import type { WebSocketClient } from "$lib/web-socket-client";
+import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
+import { currentStoryline, storylineTitleInput } from "$lib/stores";
+import type { WebSocketClient } from "$lib/web-socket-client";
+import type { User } from "@storytelling/types";
+import { Alert } from "flowbite-svelte";
+import {
+	CloseCircleSolid,
+	InfoCircleSolid,
+	WandMagicSparklesOutline,
+} from "flowbite-svelte-icons";
+import { quintOut } from "svelte/easing";
+import { fade, slide } from "svelte/transition";
 
-	let validationError: string;
-	let showAlert = false;
+let validationError: string;
+let showAlert = false;
 
-	function handleCreateStorylineFormSubmit(e: Event) {
-		e.preventDefault();
+function handleCreateStorylineFormSubmit(e: Event) {
+	e.preventDefault();
 
-		showAlert = true;
+	showAlert = true;
 
-		setTimeout(() => {
-			showAlert = false;
-		}, 3000);
+	setTimeout(() => {
+		showAlert = false;
+	}, 3000);
 
-		if ($storylineTitleInput.trim().length === 0) {
-			validationError = "Title cannot be empty!";
-		} else {
-			handleCreateStoryline();
-			goto(`/storylines/${$currentStoryline.id}`, { replaceState: true });
-		}
+	if ($storylineTitleInput.trim().length === 0) {
+		validationError = "Title cannot be empty!";
+	} else {
+		handleCreateStoryline();
+		goto(`/storylines/${$currentStoryline.id}`, { replaceState: true });
 	}
+}
 
-	async function handleCreateStoryline() {
-		const user: User = $page.data.user;
-		const wsClient: WebSocketClient = $page.data.wsClient;
+async function handleCreateStoryline() {
+	const user: User = $page.data.user;
+	const wsClient: WebSocketClient = $page.data.wsClient;
 
-		if (!user) throw new Error("no user found");
-		if (!wsClient) throw new Error("no wsClient found");
+	if (!user) throw new Error("no user found");
+	if (!wsClient) throw new Error("no wsClient found");
 
-		// TODO: ALTER TYPE STRUCUTRE TO CREATE A NEW STORYLINE, ONLY NEEDS TITLE AND STEPS FIELDS
-		const response = await wsClient.sendMessage({
-			messageType: "create",
-			data: {
-				userId: user.id,
-				storyline: {
-					title: $storylineTitleInput,
-					totalSteps: TOTAL_STORYLINE_STEPS,
-				},
+	// TODO: ALTER TYPE STRUCUTRE TO CREATE A NEW STORYLINE, ONLY NEEDS TITLE AND STEPS FIELDS
+	const response = await wsClient.sendMessage({
+		messageType: "create",
+		data: {
+			userId: user.id,
+			storyline: {
+				title: $storylineTitleInput,
+				totalSteps: TOTAL_STORYLINE_STEPS,
 			},
-		});
+		},
+	});
 
-		if (response && response.storyline) {
-			storylineTitleInput.set("");
-			goto(`/storylines/${response.storyline.id}`, { replaceState: true });
-		}
+	if (response?.storyline) {
+		storylineTitleInput.set("");
+		goto(`/storylines/${response.storyline.id}`, { replaceState: true });
 	}
+}
 </script>
 
 <form on:submit|preventDefault={handleCreateStorylineFormSubmit} class="space-y-4">

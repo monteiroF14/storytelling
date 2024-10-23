@@ -23,11 +23,14 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 				});
 			}
 
-			const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/user/1`, {
-				headers: {
-					Authorization: `Bearer ${token}`,
+			const { data } = await axios.get(
+				`${import.meta.env.VITE_API_URL}/user/1`,
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
 				},
-			});
+			);
 
 			return {
 				session: {

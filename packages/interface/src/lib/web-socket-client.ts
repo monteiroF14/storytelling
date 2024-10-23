@@ -84,7 +84,9 @@ export class WebSocketClient {
 	private reconnect() {
 		if (this._retryCount < this._maxRetries) {
 			this._retryCount++;
-			console.log(`Retrying connection in ${this.reconnectInterval / 1000} seconds...`);
+			console.log(
+				`Retrying connection in ${this.reconnectInterval / 1000} seconds...`,
+			);
 			setTimeout(() => {
 				this.connect();
 			}, this.reconnectInterval);
@@ -94,7 +96,9 @@ export class WebSocketClient {
 	}
 
 	// Send a message to the server
-	sendMessage(message: WebSocketMessagePayload): Promise<WebSocketMessageResponse> {
+	sendMessage(
+		message: WebSocketMessagePayload,
+	): Promise<WebSocketMessageResponse> {
 		return new Promise((resolve, reject) => {
 			if (this.socket && this.socket.readyState === WebSocket.OPEN) {
 				this.socket.send(JSON.stringify(message));

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { authController } from "./controllers/auth-controller";
 import { userController } from "./controllers/user-controller";
-import { cors } from "hono/cors";
 
 const app = new Hono();
 const auth = new Hono();
@@ -25,7 +25,7 @@ auth.get(
 	"/google/callback",
 	authController.getTokens,
 	userController.handleUser,
-	authController.generateAccessToken
+	authController.generateAccessToken,
 );
 
 // auth.post("/new-token", authController.generateAccessToken)
@@ -39,7 +39,7 @@ app.use(
 	cors({
 		origin: "http://localhost:5173", // your frontend URL
 		credentials: true, // allow cookies to be sent
-	})
+	}),
 );
 
 export { app };

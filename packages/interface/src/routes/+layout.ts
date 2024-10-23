@@ -1,7 +1,7 @@
+import { browser } from "$app/environment";
 import { storylines } from "$lib/stores";
 import { WebSocketClient } from "$lib/web-socket-client";
 import { get } from "svelte/store";
-import { browser } from "$app/environment";
 import type { LayoutLoad } from "./$types";
 
 let wsClient: WebSocketClient | null = null;
@@ -29,7 +29,9 @@ export const load: LayoutLoad = ({ data }) => {
 		};
 	}
 
-	const wsClient = getWebSocketClient(`ws://localhost:3000/?token=${data.session?.token}`);
+	const wsClient = getWebSocketClient(
+		`ws://localhost:3000/?token=${data.session?.token}`,
+	);
 
 	return {
 		...data,
@@ -50,7 +52,8 @@ export const load: LayoutLoad = ({ data }) => {
 				} catch (e) {
 					console.error("Error while fetching storyline:", e);
 					return {
-						error: "Failed to connect to the WebSocket. Please check your token.",
+						error:
+							"Failed to connect to the WebSocket. Please check your token.",
 					};
 				}
 			})

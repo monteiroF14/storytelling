@@ -58,7 +58,9 @@ export const WebSocketMessagePayloadSchema = z.object({
 		storyline: z.union([StorylineSchema, CreateStorylineSchema]).optional(),
 	}),
 });
-export type WebSocketMessagePayload = z.infer<typeof WebSocketMessagePayloadSchema>;
+export type WebSocketMessagePayload = z.infer<
+	typeof WebSocketMessagePayloadSchema
+>;
 
 export const WebSocketMessageResponseSchema = z.object({
 	type: z.enum(["error", "success"]),
@@ -66,4 +68,6 @@ export const WebSocketMessageResponseSchema = z.object({
 	storyline: StorylineSchema.optional(),
 });
 
-export type WebSocketMessageResponse = z.infer<typeof WebSocketMessageResponseSchema>;
+export type WebSocketMessageResponse = z.infer<
+	typeof WebSocketMessageResponseSchema
+>;

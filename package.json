@@ -1,10 +1,13 @@
 {
 	"name": "storytelling",
-	"module": "index.ts",
+	"version": "0.0.1",
 	"type": "module",
-	"workspaces": [
-		"packages/*"
-	],
+	"private": true,
+	"workspaces": ["packages/*"],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/monteiroF14/storytelling"
+	},
 	"scripts": {
 		"dev": "bun run --workspace @storytelling/server dev & bun run --workspace @storytelling/interface dev",
 		"dev:ui": "bun run --cwd packages/interface dev",
@@ -13,20 +16,16 @@
 		"db:generate": "bun run --cwd packages/server db:generate",
 		"db:push": "bun run --cwd packages/server db:push",
 		"db:studio": "bun run --cwd packages/server db:studio",
-		"lint:server": "bun run --cwd packages/server lint"
+		"lint": "biome check --fix --unsafe"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
 		"@types/bun": "latest",
-		"@types/eslint": "^9.6.0",
 		"dotenv": "^16.4.5",
-		"eslint": "^9.11.1",
-		"jsonwebtoken": "^9.0.2",
-		"typescript-eslint": "^8.0.0"
+		"jsonwebtoken": "^9.0.2"
 	},
 	"peerDependencies": {
 		"typescript": "^5.0.0"
 	},
-	"trustedDependencies": [
-		"svelte-preprocess"
-	]
+	"trustedDependencies": ["svelte-preprocess"]
 }
