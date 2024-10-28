@@ -1,22 +1,27 @@
-version: "3.8"
-
 services:
   llama:
-    build:
-      context: .
-      dockerfile: packages/llama/Dockerfile
-    ports:
-      - "5000:5000" # Expose LLaMA API on port 5001
-    restart: unless-stopped
+    image: ollama/ollama:latest
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f localhost:11434"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
+    build: .
     ports:
-      - "3000:3000" # Expose your API on port 5000
+      - "3000:3000"
     depends_on:
-      - llama # Ensure llama service starts before the API
+      llama:
+        condition: service_healthy
+        restart: true
     environment:
-      - LLAMA_URL=http://llama:5000/llama # URL to access the LLaMA service
-    restart: unless-stopped
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - API_URL=http://localhost:3000
+      - ACCESS_TOKEN_EXPIRATION=1d
+      - REFRESH_TOKEN_EXPIRATION=54000
+      - JWT_SECRET=success
+      - LLAMA_API_URL=http://llama:11434
+    restart: always
