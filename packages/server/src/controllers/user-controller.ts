@@ -1,9 +1,9 @@
+import { logger } from "app/logger";
 import type { Context, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { type AuthService, authService } from "services/auth-service";
+import { type UserService, userService } from "services/user-service";
 import { z } from "zod";
-import { logger } from "../logger";
-import { type AuthService, authService } from "../services/auth-service";
-import { type UserService, userService } from "../services/user-service";
 
 const GoogleTokensSchema = z.object({
 	access_token: z.string().min(1, { message: "Access token is required" }),
@@ -94,7 +94,7 @@ class UserController {
 			const userId = c.req.param("id");
 			if (!userId) return await next();
 
-			user = await userService.read(Number.parseInt(userId));
+			user = await this.userService.read(Number.parseInt(userId));
 
 			return c.json({ user });
 		} catch (e) {

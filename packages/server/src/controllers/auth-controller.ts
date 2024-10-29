@@ -1,16 +1,11 @@
 import type { JwtPayload, User } from "@storytelling/types";
+import { env } from "app/env";
 import type { Context, Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import jwt from "jsonwebtoken";
-import { env } from "../env";
-import { type AuthService, authService } from "../services/auth-service";
-import { type UserService, userService } from "../services/user-service";
-
-// continue this and make google login work both on front and back
-// make sure the session keeps
-
-// add tests to make sure the session keep working
+import { type AuthService, authService } from "services/auth-service";
+import { type UserService, userService } from "services/user-service";
 
 class AuthController {
 	readonly authService: AuthService;

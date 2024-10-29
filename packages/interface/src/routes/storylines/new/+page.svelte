@@ -1,18 +1,9 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
-import { page } from "$app/stores";
 import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
-import { currentStoryline, storylineTitleInput } from "$lib/stores";
+import { storylineTitleInput } from "$lib/stores";
 import type { WebSocketClient } from "$lib/web-socket-client";
 import type { User } from "@storytelling/types";
-import { Alert } from "flowbite-svelte";
-import {
-	CloseCircleSolid,
-	InfoCircleSolid,
-	WandMagicSparklesOutline,
-} from "flowbite-svelte-icons";
-import { quintOut } from "svelte/easing";
-import { fade, slide } from "svelte/transition";
 
 let validationError: string;
 let showAlert = false;

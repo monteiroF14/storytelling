@@ -1,9 +1,9 @@
-import { StorylineSchema, type Storyline } from "@storytelling/types";
+import { type Storyline, StorylineSchema } from "@storytelling/types";
+import { ValidationError } from "app/error";
+import { logger } from "app/logger";
+import { db } from "db";
+import { storyline } from "db/schema";
 import { eq, sql } from "drizzle-orm";
-import { db } from "../db";
-import { storyline } from "../db/schema";
-import { logger } from "../logger";
-import { ValidationError } from "../error";
 
 export class StorylineService {
 	async update({ storyline: newStoryline }: { storyline: Storyline }) {

@@ -1,6 +1,6 @@
+import { authController } from "controllers/auth-controller";
+import { userController } from "controllers/user-controller";
 import { Hono } from "hono";
-import { authController } from "../controllers/auth-controller";
-import { userController } from "../controllers/user-controller";
 
 export const authRouter = new Hono();
 

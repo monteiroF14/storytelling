@@ -1,5 +1,5 @@
+import type { StorylineController } from "controllers/storyline-controller";
 import { Hono } from "hono";
-import type { StorylineController } from "../controllers/storyline-controller";
 
 export const createStorylineRouter = (controller: StorylineController) => {
 	const storylineRouter = new Hono();

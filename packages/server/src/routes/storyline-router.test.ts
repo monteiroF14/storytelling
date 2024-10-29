@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { env } from "../env";
 import type { Storyline } from "@storytelling/types";
-import app from "../server";
+import { env } from "app/env";
+import app from "app/server";
 
 describe("Storyline API", () => {
 	describe("GET /storylines", () => {

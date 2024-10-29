@@ -1,19 +1,19 @@
 import { CreateStorylineSchema, StorylineSchema } from "@storytelling/types";
+import { ValidationError } from "app/error";
+import { logger } from "app/logger";
 import axios from "axios";
 import { env } from "bun";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { logger } from "../logger";
+import {
+	type ApiModelService,
+	apiModelService,
+} from "../services/api-model-service";
 import {
 	type StorylineService,
 	storylineService,
 } from "../services/storyline-service";
-import {
-	apiModelService,
-	type ApiModelService,
-} from "../services/api-model-service";
-import { ValidationError } from "../error";
 
 export class StorylineController {
 	constructor(
@@ -163,7 +163,7 @@ export class StorylineController {
 				method: "POST",
 				url: `${env.LLAMA_API_URL}/api/generate`,
 				data: {
-					model: apiModelService.OLLAMA_MODEL,
+					model: this.apiModelService.OLLAMA_MODEL,
 					prompt,
 				},
 				responseType: "stream",

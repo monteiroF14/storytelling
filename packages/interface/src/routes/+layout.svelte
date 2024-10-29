@@ -1,6 +1,4 @@
 <script lang="ts">
-import { Spinner, Tooltip } from "flowbite-svelte";
-import { ArrowLeftToBracketOutline, PlusOutline } from "flowbite-svelte-icons";
 import { onMount } from "svelte";
 import type { LayoutData } from "./$types";
 import "../app.css";

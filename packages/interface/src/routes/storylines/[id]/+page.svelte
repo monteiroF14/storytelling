@@ -1,6 +1,4 @@
 <script lang="ts">
-import { goto } from "$app/navigation";
-import { page } from "$app/stores";
 import {
 	CHOICES,
 	MAX_AI_RETRIES,
@@ -14,16 +12,7 @@ import {
 	currentStoryline,
 	storylines,
 } from "$lib/stores";
-import { formatTimeAgo } from "$lib/util";
-import { CloseButton, Drawer, Progressbar } from "flowbite-svelte";
-import {
-	AngleRightOutline,
-	ArrowsRepeatOutline,
-	CheckCircleOutline,
-	ExclamationCircleOutline,
-	RefreshOutline,
-} from "flowbite-svelte-icons";
-import { sineIn, sineOut } from "svelte/easing";
+import { sineIn } from "svelte/easing";
 import type { TextOutput } from "window.ai";
 import type { PageData } from "./$types";
 

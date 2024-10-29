@@ -1,13 +1,13 @@
-import { type Context, Hono, type Next } from "hono";
+import { env } from "app/env";
+import { logger } from "app/logger";
+import { storylineController } from "controllers/storyline-controller";
+import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
-import { env } from "./env";
-import { logger } from "./logger";
-import { authRouter } from "./routes/auth-router";
-import { createStorylineRouter } from "./routes/storyline-router";
-import { apiModelService } from "./services/api-model-service";
-import { storylineController } from "./controllers/storyline-controller";
+import { authRouter } from "routes/auth-router";
+import { createStorylineRouter } from "routes/storyline-router";
+import { apiModelService } from "services/api-model-service";
 
-export const app = new Hono({ strict: false });
+const app = new Hono({ strict: false });
 
 app.use(
 	cors({
@@ -25,9 +25,9 @@ app.get("/", (c: Context) => {
 app.route("/auth", authRouter);
 app.route("/storylines", createStorylineRouter(storylineController));
 
-export default app;
-
 logger({
 	message: `server is running in ${env.API_URL}`,
 	type: "INFO",
 });
+
+export default app;
