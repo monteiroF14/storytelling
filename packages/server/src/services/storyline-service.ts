@@ -1,8 +1,9 @@
-import type { Storyline } from "@storytelling/types";
-import { eq } from "drizzle-orm";
+import { StorylineSchema, type Storyline } from "@storytelling/types";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { storyline } from "../db/schema";
 import { logger } from "../logger";
+import { ValidationError } from "../error";
 
 export class StorylineService {
 	async update({ storyline: newStoryline }: { storyline: Storyline }) {
@@ -86,9 +87,25 @@ export class StorylineService {
 		userId,
 		limit = 12,
 		offset = 0,
-	}: { userId?: number; limit?: number; offset?: number }): Promise<
-		Storyline[] | undefined
-	> {
+		orderBy = "created",
+		order = "asc",
+	}: {
+		userId?: number;
+		limit?: number;
+		offset?: number;
+		orderBy?: string;
+		order?: string;
+	}): Promise<Storyline[] | undefined> {
+		function isOrderByKey(orderBy: string): orderBy is keyof Storyline {
+			return orderBy in StorylineSchema.shape;
+		}
+
+		if (!isOrderByKey(orderBy)) {
+			throw new ValidationError(
+				`Invalid orderBy field: ${orderBy}. Allowed fields are: id, userId, title, created, updated, status, visibility.`,
+			);
+		}
+
 		try {
 			const result = await db
 				.select()
@@ -96,6 +113,7 @@ export class StorylineService {
 				.where(userId ? eq(storyline.userId, userId) : undefined)
 				.limit(limit)
 				.offset(offset)
+				.orderBy(sql`${orderBy} ${order}`)
 				.all();
 
 			return result.map((storyline) => ({

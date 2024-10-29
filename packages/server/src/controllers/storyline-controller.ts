@@ -13,6 +13,7 @@ import {
 	apiModelService,
 	type ApiModelService,
 } from "../services/api-model-service";
+import { ValidationError } from "../error";
 
 export class StorylineController {
 	constructor(
@@ -114,10 +115,15 @@ export class StorylineController {
 			const userId = c.req.query("userId");
 			const limit = c.req.query("limit");
 			const offset = c.req.query("offset");
+			const orderBy = c.req.query("orderBy");
+			const order = c.req.query("order");
+
 			const options = {
 				userId: userId ? Number.parseInt(userId) : undefined,
 				limit: limit ? Number.parseInt(limit) : undefined,
 				offset: offset ? Number.parseInt(offset) : undefined,
+				orderBy,
+				order: order === "desc" ? "desc" : "asc",
 			};
 
 			const storylines = await this.storylineService.getStorylines(options);
@@ -128,6 +134,13 @@ export class StorylineController {
 				message: `${this.constructor.name} > ${this.getStorylines.name} -> Error fetching user storylines: ${e}`,
 				type: "ERROR",
 			});
+
+			if (e instanceof ValidationError) {
+				throw new HTTPException(400, {
+					message: e.message,
+				});
+			}
+
 			throw new HTTPException(500, {
 				message: e instanceof Error ? e.message : "Internal Server Error",
 			});

@@ -12,6 +12,32 @@ describe("Storyline API", () => {
 		});
 	});
 
+	describe("GET /storylines with orderBy", () => {
+		it("should fetch storylines with a valid orderBy field", async () => {
+			const res = await app.request(
+				`${env.API_URL}/storylines?orderBy=created&order=desc`,
+			);
+			expect(res.ok).toBeTrue();
+			expect(res.status).toBe(200);
+		});
+
+		it("should fail if an invalid orderBy field is provided", async () => {
+			const res = await app.request(
+				`${env.API_URL}/storylines?orderBy=invalidField&order=desc`,
+			);
+			expect(res.ok).toBeFalse();
+			expect(res.status).toBe(400);
+		});
+
+		it("should fetch storylines with a order direction", async () => {
+			const res = await app.request(
+				`${env.API_URL}/storylines?orderBy=created&order=asc`,
+			);
+			expect(res.ok).toBeTrue();
+			expect(res.status).toBe(200);
+		});
+	});
+
 	describe("POST /storylines", () => {
 		it("should create a new storyline", async () => {
 			const newStoryline = {
