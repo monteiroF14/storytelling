@@ -16,6 +16,7 @@
 		"db:generate": "bun run --cwd packages/server db:generate",
 		"db:push": "bun run --cwd packages/server db:push",
 		"db:studio": "bun run --cwd packages/server db:studio",
+		"db:seed": "bun run --cwd packages/server db:seed",
 		"lint": "biome check --fix --unsafe"
 	},
 	"devDependencies": {
