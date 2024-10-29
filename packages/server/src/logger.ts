@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 export async function logger({
 	userId,
@@ -11,7 +11,10 @@ export async function logger({
 }) {
 	const LOG_PATH = path.join(__dirname, "../logs/server.log");
 
-	const formattedDate = new Date().toISOString().replace("T", " ").substring(0, 19);
+	const formattedDate = new Date()
+		.toISOString()
+		.replace("T", " ")
+		.substring(0, 19);
 
 	try {
 		// Attempt to read existing logs
@@ -21,7 +24,7 @@ export async function logger({
 		const currentLog = `[${formattedDate}] [${type.toUpperCase()}] ${userPart}- ${message}`;
 
 		// Append the new log with a newline
-		await Bun.write(LOG_PATH, logs + "\n" + currentLog);
+		await Bun.write(LOG_PATH, `${logs}\n${currentLog}`);
 	} catch (e) {
 		if (e instanceof Error && e.message.includes("ENOENT")) {
 			// If the file doesn't exist, create it with the log entry

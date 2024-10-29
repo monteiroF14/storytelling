@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
 	API_URL: z.string().url(),
+	LLAMA_API_URL: z.string().url(),
 
 	// JWT secret should not be empty
 	JWT_SECRET: z.string().min(1, "JWT secret cannot be empty"),

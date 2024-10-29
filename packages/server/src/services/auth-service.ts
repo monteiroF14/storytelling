@@ -2,7 +2,7 @@ import type { JwtPayload } from "@storytelling/types";
 import type { Credentials } from "google-auth-library";
 import { google } from "googleapis";
 import jwt from "jsonwebtoken";
-import env from "../env";
+import { env } from "../env";
 
 export class AuthService {
 	private REDIRECT_URL = `${env.API_URL}/auth/google/callback`;

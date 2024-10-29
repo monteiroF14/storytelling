@@ -4,7 +4,7 @@ import { db } from "../db";
 import { storyline } from "../db/schema";
 import { logger } from "../logger";
 
-class StorylineService {
+export class StorylineService {
 	async update({ storyline: newStoryline }: { storyline: Storyline }) {
 		try {
 			return await db
@@ -28,7 +28,7 @@ class StorylineService {
 
 	async create({
 		title,
-		totalSteps,
+		totalSteps = 8,
 		userId,
 	}: Pick<Storyline, "title" | "totalSteps" | "userId">) {
 		try {
@@ -43,11 +43,12 @@ class StorylineService {
 				.get();
 
 			if (!result) {
-				return;
+				throw new Error("failed to create storyline");
 			}
 
 			return result;
 		} catch (e) {
+			console.error(`Failed to create storyline: ${e}`);
 			logger({
 				message:
 					e instanceof Error ? e.message : "error while creating storyline",
@@ -81,20 +82,27 @@ class StorylineService {
 		}
 	}
 
-	async getUserStorylines({
+	async getStorylines({
 		userId,
-	}: { userId: number }): Promise<Storyline[] | undefined> {
+		limit = 12,
+		offset = 0,
+	}: { userId?: number; limit?: number; offset?: number }): Promise<
+		Storyline[] | undefined
+	> {
 		try {
 			const result = await db
 				.select()
 				.from(storyline)
-				.where(eq(storyline.userId, userId))
+				.where(userId ? eq(storyline.userId, userId) : undefined)
+				.limit(limit)
+				.offset(offset)
 				.all();
-			if (!result) return;
 
 			return result.map((storyline) => ({
 				...storyline,
 				steps: JSON.parse(storyline.steps) as Storyline["steps"],
+				visibility: storyline.visibility as "public" | "private",
+				status: storyline.status as "ongoing" | "completed",
 			}));
 		} catch (e) {
 			logger({

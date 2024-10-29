@@ -3,7 +3,7 @@ import type { Context, Next } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import jwt from "jsonwebtoken";
-import env from "../env";
+import { env } from "../env";
 import { type AuthService, authService } from "../services/auth-service";
 import { type UserService, userService } from "../services/user-service";
 

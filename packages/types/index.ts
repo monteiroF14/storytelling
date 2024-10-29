@@ -13,12 +13,15 @@ export const GeneratedStepSchema = z.object({
 export type GeneratedStep = z.infer<typeof GeneratedStepSchema>;
 
 export const CreateStorylineSchema = z.object({
-	title: z.string(),
-	totalSteps: z.number().nullable(),
+	title: z.string().min(1, { message: "Title is required" }),
+	totalSteps: z
+		.number()
+		.min(1, { message: "Total steps must be a positive number" }),
+	userId: z.number().positive({ message: "User ID is required" }),
 });
 export type CreateStoryline = z.infer<typeof CreateStorylineSchema>;
 
-const StorylineSchema = z.object({
+export const StorylineSchema = z.object({
 	id: z.number(),
 	title: z.string(),
 	totalSteps: z.number().nullable(),
