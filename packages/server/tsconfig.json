@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"esModuleInterop": true,
+		"baseUrl": "src",
+		"paths": {
+			"app/*": ["./*"],
+			"controllers/*": ["controllers/*"],
+			"services/*": ["services/*"],
+			"routes/*": ["routes/*"],
+			"db/*": ["db/*"]
+		}
+	}
+}
