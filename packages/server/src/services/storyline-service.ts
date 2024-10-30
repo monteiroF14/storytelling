@@ -1,4 +1,10 @@
-import { type Storyline, StorylineSchema } from "@storytelling/types";
+import {
+	type Storyline,
+	StorylineSchema,
+	UpdateStatusSchema,
+	UpdateStepsSchema,
+	UpdateVisibilitySchema,
+} from "@storytelling/types";
 import { ValidationError } from "app/error";
 import { logger } from "app/logger";
 import { db } from "db";
@@ -6,24 +12,100 @@ import { storyline } from "db/schema";
 import { eq, sql } from "drizzle-orm";
 
 export class StorylineService {
-	async update({ storyline: newStoryline }: { storyline: Storyline }) {
+	async updateVisibility({
+		id,
+		visibility,
+	}: Pick<Storyline, "id" | "visibility">) {
 		try {
-			return await db
+			const query = await db
 				.update(storyline)
 				.set({
-					...newStoryline,
-					steps: JSON.stringify(newStoryline.steps),
+					visibility,
 					updated: Date.now(),
 				})
-				.where(eq(storyline.id, newStoryline.id))
+				.where(eq(storyline.id, id))
 				.returning()
 				.get();
+
+			const { status } = UpdateStatusSchema.parse(query.status);
+			const { steps } = UpdateStepsSchema.parse(query.steps);
+
+			return {
+				...query,
+				steps,
+				status,
+				visibility,
+			};
 		} catch (e) {
 			logger({
 				message:
-					e instanceof Error ? e.message : "error while updating storyline",
+					e instanceof Error ? e.message : "error while updating visibility",
 				type: "ERROR",
 			});
+			throw e;
+		}
+	}
+
+	async updateSteps({ id, steps }: Pick<Storyline, "id" | "steps">) {
+		try {
+			const query = await db
+				.update(storyline)
+				.set({
+					steps: JSON.stringify(steps),
+					updated: Date.now(),
+				})
+				.where(eq(storyline.id, id))
+				.returning()
+				.get();
+
+			const { status } = UpdateStatusSchema.parse(query.status);
+			const { visibility } = UpdateVisibilitySchema.parse(query.visibility);
+
+			return {
+				...query,
+				steps,
+				status,
+				visibility,
+			};
+		} catch (e) {
+			logger({
+				message: e instanceof Error ? e.message : "error while updating steps",
+				type: "ERROR",
+			});
+			throw e;
+		}
+	}
+
+	async updateStatus({
+		id,
+		status,
+	}: Pick<Storyline, "id" | "status">): Promise<Storyline> {
+		try {
+			const query = await db
+				.update(storyline)
+				.set({
+					status,
+					updated: Date.now(),
+				})
+				.where(eq(storyline.id, id))
+				.returning()
+				.get();
+
+			const { steps } = UpdateStepsSchema.parse(query.steps);
+			const { visibility } = UpdateVisibilitySchema.parse(query.visibility);
+
+			return {
+				...query,
+				steps,
+				status,
+				visibility,
+			};
+		} catch (e) {
+			logger({
+				message: e instanceof Error ? e.message : "error while updating status",
+				type: "ERROR",
+			});
+			throw e;
 		}
 	}
 

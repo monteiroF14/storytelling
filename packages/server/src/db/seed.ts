@@ -1,9 +1,9 @@
 import { Database } from "bun:sqlite";
 import path from "node:path";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { user, storyline } from "db/schema";
 import { faker } from "@faker-js/faker";
 import chalk from "chalk";
+import { storyline, user } from "db/schema";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 
 const dbPath = path.join(__dirname, "../../sqlite.db");
 const sqlite = new Database(dbPath);
@@ -17,14 +17,12 @@ async function seedDatabase() {
 		refreshToken: faker.internet.jwt(),
 	}));
 
-	// Insert users into the database
 	await Promise.all(
 		users.map(async (userData) => {
 			await db.insert(user).values(userData);
 		}),
 	);
 
-	// Create a number of fake storylines for each user
 	const storylines = Array.from({ length: 20 }).map(() => {
 		const randomUserId = faker.number.int();
 
@@ -49,12 +47,11 @@ async function seedDatabase() {
 	chalk.bgGreenBright("Seeding completed!");
 }
 
-// Run the seed function
 seedDatabase()
 	.then(() => {
-		sqlite.close(); // Close the database connection
+		sqlite.close();
 	})
 	.catch((error) => {
 		console.error("Seeding failed:", error);
-		sqlite.close(); // Close the database connection on error
+		sqlite.close();
 	});

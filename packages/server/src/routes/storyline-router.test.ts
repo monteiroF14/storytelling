@@ -98,6 +98,104 @@ describe("Storyline API", () => {
 		});
 	});
 
+	describe("PATCH /storylines/:id/visibility", () => {
+		it("should update the visibility of an existing storyline", async () => {
+			const updatedVisibility = {
+				visibility: "public",
+			};
+
+			const res = await app.request(`${env.API_URL}/storylines/1/visibility`, {
+				method: "PATCH",
+				body: JSON.stringify(updatedVisibility),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeTrue();
+			expect(res.status).toBe(200);
+		});
+
+		it("should fail if invalid visibility is provided", async () => {
+			const invalidVisibility = {
+				visibility: "invalidValue",
+			};
+
+			const res = await app.request(`${env.API_URL}/storylines/1/visibility`, {
+				method: "PATCH",
+				body: JSON.stringify(invalidVisibility),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeFalse();
+			expect(res.status).toBe(400);
+		});
+	});
+
+	describe("PATCH /storylines/:id/steps", () => {
+		it("should update the steps of an existing storyline", async () => {
+			const updatedSteps = {
+				steps: [
+					{
+						choice: "I go forward",
+						description: "Your in the middle of nowhere, what do you do: ",
+					},
+				],
+			};
+
+			const res = await app.request(`${env.API_URL}/storylines/1/steps`, {
+				method: "PATCH",
+				body: JSON.stringify(updatedSteps),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeTrue();
+			expect(res.status).toBe(200);
+		});
+
+		it("should fail if steps are not provided", async () => {
+			const res = await app.request(`${env.API_URL}/storylines/1/steps`, {
+				method: "PATCH",
+				body: JSON.stringify({}),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeFalse();
+			expect(res.status).toBe(400);
+		});
+	});
+
+	describe("PATCH /storylines/:id/status", () => {
+		it("should update the status of an existing storyline", async () => {
+			const updatedStatus = {
+				status: "completed",
+			};
+
+			const res = await app.request(`${env.API_URL}/storylines/1/status`, {
+				method: "PATCH",
+				body: JSON.stringify(updatedStatus),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeTrue();
+			expect(res.status).toBe(200);
+			// Additional checks can be done here if necessary
+		});
+
+		it("should fail if an invalid status is provided", async () => {
+			const invalidStatus = {
+				status: "invalidStatus",
+			};
+
+			const res = await app.request(`${env.API_URL}/storylines/1/status`, {
+				method: "PATCH",
+				body: JSON.stringify(invalidStatus),
+				headers: { "Content-Type": "application/json" },
+			});
+
+			expect(res.ok).toBeFalse();
+			expect(res.status).toBe(400);
+		});
+	});
+
 	describe("Error Handling", () => {
 		it("should fail if the HTTP method is incorrect", async () => {
 			const newStoryline = {
@@ -137,31 +235,6 @@ describe("Storyline API", () => {
 
 			expect(res.ok).toBeFalse();
 			expect(res.status).toBe(503);
-		});
-	});
-
-	describe("PUT /storylines/:id", () => {
-		it("should update an existing storyline", async () => {
-			const updatedData = {
-				title: "Updated Story",
-				id: 1,
-				created: Date.now(),
-				status: "ongoing",
-				steps: [],
-				totalSteps: 10,
-				updated: Date.now(),
-				userId: 1,
-				visibility: "private",
-			} satisfies Storyline;
-
-			const res = await app.request(`${env.API_URL}/storylines/1`, {
-				method: "PUT",
-				body: JSON.stringify(updatedData),
-				headers: { "Content-Type": "application/json" },
-			});
-
-			expect(res.ok).toBeTrue();
-			expect(res.status).toBe(200);
 		});
 	});
 

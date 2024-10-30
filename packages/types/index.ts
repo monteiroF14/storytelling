@@ -34,8 +34,14 @@ export const StorylineSchema = z.object({
 });
 export type Storyline = z.infer<typeof StorylineSchema>;
 
+export const UpdateVisibilitySchema = StorylineSchema.pick({
+	visibility: true,
+});
+export const UpdateStepsSchema = StorylineSchema.pick({ steps: true });
+export const UpdateStatusSchema = StorylineSchema.pick({ status: true });
+
 // Represents a user playing the game
-export const UserSchema = z.object({
+const UserSchema = z.object({
 	id: z.number(),
 	email: z.string().email(),
 	username: z.string(),

@@ -7,7 +7,10 @@ export const createStorylineRouter = (controller: StorylineController) => {
 	storylineRouter.get("/", controller.getStorylines);
 	storylineRouter.get("/:storylineId", controller.getStoryline);
 	storylineRouter.post("/", controller.createStoryline);
-	storylineRouter.put("/:id", controller.updateStoryline);
+
+	storylineRouter.patch("/:id/visibility");
+	storylineRouter.patch("/:id/steps");
+	storylineRouter.patch("/:id/status");
 
 	// TODO: prefetch this route on storyline load
 	storylineRouter.post("/generate", controller.generateChoices);

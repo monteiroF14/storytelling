@@ -1,8 +1,8 @@
 import type { User } from "@storytelling/types";
+import { logger } from "app/logger";
+import { db } from "db";
+import { user } from "db/schema";
 import { eq } from "drizzle-orm";
-import { db } from "../db";
-import { user } from "../db/schema";
-import { logger } from "../logger";
 
 export class UserService {
 	async getUserRefreshToken({ userId }: { userId: number }) {
@@ -36,6 +36,7 @@ export class UserService {
 				.from(user)
 				.where(eq(user.id, userId))
 				.get();
+
 			return result;
 		} catch (e) {
 			logger({

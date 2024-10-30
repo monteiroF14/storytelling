@@ -1,4 +1,10 @@
-import { CreateStorylineSchema, StorylineSchema } from "@storytelling/types";
+import {
+	CreateStorylineSchema,
+	StorylineSchema,
+	UpdateStatusSchema,
+	UpdateStepsSchema,
+	UpdateVisibilitySchema,
+} from "@storytelling/types";
 import { ValidationError } from "app/error";
 import { logger } from "app/logger";
 import axios from "axios";
@@ -51,33 +57,107 @@ export class StorylineController {
 		}
 	};
 
-	updateStoryline = async (c: Context) => {
+	updateVisibility = async (c: Context) => {
 		try {
-			const storylineId = c.req.param("id");
-			if (!storylineId) {
-				throw new HTTPException(400, { message: "Storyline ID is required" });
-			}
+			const { id } = c.req.param();
+			const parsedId = Number.parseInt(id);
 
 			const body = await c.req.json();
-			const parsedBody = StorylineSchema.parse(body);
+			const validatedData = UpdateVisibilitySchema.parse(body);
 
-			const updatedStoryline = await this.storylineService.update({
-				storyline: {
-					...parsedBody,
-					id: Number.parseInt(storylineId),
-				},
+			const updatedStoryline = await this.storylineService.updateVisibility({
+				id: parsedId,
+				visibility: validatedData.visibility,
 			});
 
 			if (!updatedStoryline) {
-				throw new HTTPException(404, { message: "Storyline not found" });
+				throw new HTTPException(422, {
+					message: "Error updating visibility",
+				});
 			}
 
+			c.status(200);
 			return c.json({ storyline: updatedStoryline });
 		} catch (e) {
 			logger({
-				message: `${this.constructor.name} > ${this.updateStoryline.name} -> Error updating storyline: ${e}`,
+				message: `${this.constructor.name} > ${this.updateVisibility.name} -> Error updating visibility: ${e}`,
 				type: "ERROR",
 			});
+
+			if (e instanceof z.ZodError) {
+				throw new HTTPException(400, { message: e.message });
+			}
+
+			throw new HTTPException(500, {
+				message: e instanceof Error ? e.message : "Internal Server Error",
+			});
+		}
+	};
+
+	updateStatus = async (c: Context) => {
+		try {
+			const { id } = c.req.param();
+			const parsedId = Number.parseInt(id);
+
+			const body = await c.req.json();
+			const validatedData = UpdateStatusSchema.parse(body);
+
+			const updatedStoryline = await this.storylineService.updateStatus({
+				id: parsedId,
+				status: validatedData.status,
+			});
+
+			if (!updatedStoryline) {
+				throw new HTTPException(422, { message: "Error updating status" });
+			}
+
+			c.status(200);
+			return c.json({ storyline: updatedStoryline });
+		} catch (e) {
+			logger({
+				message: `${this.constructor.name} > ${this.updateSteps.name} -> Error updating steps: ${e}`,
+				type: "ERROR",
+			});
+
+			if (e instanceof z.ZodError) {
+				throw new HTTPException(400, { message: e.message });
+			}
+
+			throw new HTTPException(500, {
+				message: e instanceof Error ? e.message : "Internal Server Error",
+			});
+		}
+	};
+
+	updateSteps = async (c: Context) => {
+		try {
+			const { id } = c.req.param();
+			const parsedId = Number.parseInt(id);
+
+			const body = await c.req.json();
+			const validatedData = UpdateStepsSchema.parse(body);
+
+			const updatedStoryline = await this.storylineService.updateSteps({
+				id: parsedId,
+				steps: validatedData.steps,
+			});
+
+			if (!updatedStoryline) {
+				throw new HTTPException(422, { message: "Error updating steps" });
+			}
+
+			c.status(200);
+			return c.json({ storyline: updatedStoryline });
+		} catch (e) {
+			logger({
+				message: `${this.constructor.name} > ${this.updateSteps.name} -> Error updating steps: ${e}`,
+				type: "ERROR",
+			});
+
+			if (e instanceof z.ZodError) {
+				throw new HTTPException(400, { message: e.message });
+			}
+
 			throw new HTTPException(500, {
 				message: e instanceof Error ? e.message : "Internal Server Error",
 			});
