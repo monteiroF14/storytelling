@@ -1,4 +1,3 @@
-import type { JwtPayload } from "@storytelling/types";
 import { env } from "app/env";
 import type { Credentials } from "google-auth-library";
 import { google } from "googleapis";
@@ -41,13 +40,6 @@ export class AuthService {
 			prompt: "consent",
 			scope: this.scopes,
 		});
-	}
-
-	createJwtToken(payload: JwtPayload): string {
-		const options: jwt.SignOptions = payload.expiration
-			? { expiresIn: payload.expiration }
-			: {};
-		return jwt.sign(payload, env.JWT_SECRET!, options);
 	}
 
 	async getTokens({ code }: { code: string }): Promise<Credentials> {

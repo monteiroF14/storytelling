@@ -1,11 +1,24 @@
-import type { JwtPayload, User } from "@storytelling/types";
 import { env } from "app/env";
+import { logger } from "app/logger";
 import type { Context, Next } from "hono";
-import { getCookie, setCookie } from "hono/cookie";
+import { setCookie, deleteCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import jwt from "jsonwebtoken";
 import { type AuthService, authService } from "services/auth-service";
 import { type UserService, userService } from "services/user-service";
+import { z } from "zod";
+
+const GoogleTokensSchema = z.object({
+	access_token: z.string().min(1, { message: "Access token is required" }),
+	refresh_token: z.string().min(1, { message: "Refresh token is required" }),
+	scope: z.string().min(1, { message: "Scope is required" }),
+	token_type: z.string().min(1, { message: "Token type is required" }),
+	id_token: z.string().min(1, { message: "ID token is required" }),
+	expiry_date: z
+		.number()
+		.int()
+		.positive({ message: "Expiry date must be a positive integer" }),
+});
 
 class AuthController {
 	readonly authService: AuthService;
@@ -26,7 +39,7 @@ class AuthController {
 		const auth = this.authService.createConnection();
 		const url = this.authService.getConnectionUrl(auth);
 
-		return c.redirect(url);
+		return c.redirect(url, 307);
 	};
 
 	getTokens = async (c: Context, next: Next) => {
@@ -55,70 +68,91 @@ class AuthController {
 		return await next();
 	};
 
-	generateAccessToken = async (c: Context) => {
-		try {
-			// add user validation, maybe zod
-			const user = c.get("user") as User;
+	handleUser = async (c: Context, next: Next) => {
+		const tokens = c.get("tokens");
+		GoogleTokensSchema.parse(tokens);
 
-			const userId = user.id;
-			if (Number.isNaN(userId)) {
-				throw new HTTPException(401, {
-					message: "Failed to get a valid userId in URL",
-				});
-			}
+		const { data } = await this.authService.getUserInfo({
+			access_token: c.get("tokens").access_token,
+		});
 
-			const refreshTokenFromDb = await this.userService.getUserRefreshToken({
-				userId,
-			});
-			const refreshToken = refreshTokenFromDb
-				? refreshTokenFromDb
-				: getCookie(c, "refreshToken");
-
-			if (!refreshToken) {
-				throw new HTTPException(401, {
-					message: "Refresh token not provided.",
-				});
-			}
-
-			const decoded = jwt.verify(refreshToken, env.JWT_SECRET!) as JwtPayload;
-
-			const accessToken = this.authService.createJwtToken({
-				id: decoded.id,
-				email: decoded.email,
-				role: decoded.role,
-				expiration: env.ACCESS_TOKEN_EXPIRATION,
-			});
-
-			const oneDayFromNow = new Date(Date.now() + 86400000).toUTCString();
-
-			c.res.headers.set("Authorization", `Bearer ${accessToken}`);
-			setCookie(c, "accessToken", accessToken, {
-				httpOnly: true,
-				sameSite: "None",
-				secure: true,
-				path: "/",
-				domain: "localhost",
-				expires: new Date(oneDayFromNow),
-			});
-
-			return c.redirect("http://localhost:5173/");
-		} catch (err) {
-			if (err instanceof jwt.TokenExpiredError) {
-				throw new HTTPException(401, { message: "Refresh token has expired." });
-			}
-			if (err instanceof jwt.JsonWebTokenError) {
-				throw new HTTPException(401, { message: "Invalid refresh token." });
-			}
-
-			throw new HTTPException(500, {
-				message:
-					err instanceof HTTPException
-						? err.message
-						: err instanceof Error
-							? err.message
-							: (err as string),
+		if (
+			!data ||
+			!data.email ||
+			!data.name ||
+			!data.picture ||
+			!data.given_name
+		) {
+			throw new HTTPException(422, {
+				message: "Error while fetching google data",
 			});
 		}
+
+		const user = await this.userService.exists(data.email);
+
+		if (user) {
+			// c.set("user", user);
+
+			const payload = jwt.sign(
+				JSON.stringify({
+					id: user.id,
+				}),
+				env.JWT_SECRET!,
+			);
+
+			c.set("payload", payload);
+			return await next();
+		}
+
+		try {
+			const newUser = await this.userService.create({
+				email: data.email,
+				username: data.given_name || data.name,
+				picture: data.picture,
+			});
+
+			const payload = jwt.sign(
+				JSON.stringify({
+					id: newUser.id,
+				}),
+				env.JWT_SECRET!,
+			);
+
+			c.set("payload", payload);
+			return await next();
+		} catch (e) {
+			logger({
+				message: `${this.constructor.name} > ${this.handleUser.name} -> Error creating user: ${e}`,
+				type: "ERROR",
+			});
+			throw new HTTPException(500, { message: e as string });
+		}
+	};
+
+	signIn = async (c: Context) => {
+		const payload = c.get("payload");
+		if (!payload) {
+			throw new HTTPException(400, { message: "Payload missing" });
+		}
+
+		setCookie(c, "auth", payload, {
+			httpOnly: true,
+			path: "/",
+			maxAge: 7 * 86400,
+		});
+
+		return c.redirect("http://localhost:5173/", 301);
+	};
+
+	signOut = (c: Context) => {
+		deleteCookie(c, "auth", {
+			httpOnly: true,
+			path: "/",
+		});
+
+		c.set("user", null);
+
+		return c.json({ status: "success", message: "Successfully signed out" });
 	};
 }
 

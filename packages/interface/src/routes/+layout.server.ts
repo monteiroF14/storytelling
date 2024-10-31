@@ -1,51 +1,21 @@
-import axios from "axios";
-import jwt from "jsonwebtoken";
+import { serverApi } from "$lib/axios";
+import type { User } from "@storytelling/types";
 import type { LayoutServerLoad } from "./$types";
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
-	const token = cookies.get("accessToken");
+export const load: LayoutServerLoad = async ({ request }) => {
+	try {
+		const api = serverApi(request);
+		if (!api) throw "Unauthenticated";
 
-	// Decrypt the accessToken
-	if (token) {
-		try {
-			const sessionVerify = jwt.verify(token, import.meta.env.VITE_JWT_SECRET!);
+		const { data, status } = await api.get<{ user: User }>("/me");
 
-			// Set cookie expiration once (when token is initially set, not on every load)
-			if (!cookies.get("accessToken")) {
-				const oneDayFromNow = new Date(Date.now() + 86400000).toUTCString(); // 24 hours from now
-
-				cookies.set("accessToken", token, {
-					expires: new Date(oneDayFromNow),
-					path: "/",
-					httpOnly: true,
-					secure: true,
-					sameSite: "strict",
-				});
-			}
-
-			const { data } = await axios.get(
-				`${import.meta.env.VITE_API_URL}/user/1`,
-				{
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				},
-			);
-
-			return {
-				session: {
-					token,
-					sessionVerify,
-				},
-				user: data.user,
-			};
-		} catch (err) {
-			console.error("Failed to verify token or fetch user data:", err);
+		if (status === 401) {
+			return { user: null };
 		}
-	} else {
-		return {
-			user: null,
-			session: null,
-		};
+
+		return { user: data.user };
+	} catch (e) {
+		console.error(e);
+		return { user: null };
 	}
 };

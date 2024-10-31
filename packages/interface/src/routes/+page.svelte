@@ -1,5 +1,11 @@
 <script lang="ts">
-
+import { goto } from "$app/navigation";
+import { currentStoryline, storylines } from "$lib/stores";
+import { formatTimeAgo } from "$lib/util";
+import {
+	CheckCircleOutline,
+	ExclamationCircleOutline,
+} from "flowbite-svelte-icons";
 </script>
 
 <section class="space-y-4">

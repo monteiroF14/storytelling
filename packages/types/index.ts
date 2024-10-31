@@ -54,9 +54,6 @@ export type UserRole = "APPLICATION_USER" | "SUPER_USER";
 
 export const JwtPayloadSchema = z.object({
 	id: z.number(),
-	email: z.string().email(),
-	role: z.enum(["APPLICATION_USER", "SUPER_USER"]),
-	expiration: z.string().optional(),
 });
 export type JwtPayload = z.infer<typeof JwtPayloadSchema>;
 

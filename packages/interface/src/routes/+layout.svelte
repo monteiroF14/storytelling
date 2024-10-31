@@ -1,29 +1,14 @@
 <script lang="ts">
-import { onMount } from "svelte";
-import type { LayoutData } from "./$types";
 import "../app.css";
-import { browser } from "$app/environment";
+import { PlusOutline } from "flowbite-svelte-icons";
+import { Tooltip } from "flowbite-svelte";
+import { page } from "$app/stores";
+import { api } from "$lib/axios";
+import { invalidateAll } from "$app/navigation";
 
-if (browser) {
-	import("window.ai");
+async function handleSignOut(): Promise<void> {
+	await Promise.all([api.post("/auth/logout"), invalidateAll()]);
 }
-
-export let data: LayoutData;
-
-/* ! IF TOKEN EXPIRED MAKE A REQUEST TO A NEW TOKEN, UP TO X TIMES, THEN MAKE LOGIN AGAIN */
-onMount(() => {
-	if (data.session) {
-		const token = data.session.token;
-		if (!document.cookie.includes("accessToken")) {
-			document.cookie = `accessToken=${token}; path=/; expires=${new Date(Date.now() + 86400000).toUTCString()}; SameSite=Strict; Secure`;
-		}
-	}
-});
-
-const handleSignOut = () => {
-	document.cookie =
-		"accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-};
 </script>
 
 <header
@@ -41,12 +26,14 @@ const handleSignOut = () => {
 		<Tooltip placement="bottom">New storyline</Tooltip>
 	</div>
 
-	{#if data.session}
+	{#if $page.data.user}
+     <!-- <ArrowLeftToBracketOutline size="xl" /> -->
 		<button
 			class="px-4 py-2 rounded-full font-semibold text-xl"
 			on:click={handleSignOut}
-			title="Sign Out"><ArrowLeftToBracketOutline size="xl" /></button
-		>
+			title="Sign Out">
+        <img src={$page.data.user.picture} alt="profile" class="w-10 h-10 rounded-full cursor-pointer">
+    </button>
 		<Tooltip placement="bottom">Sign Out</Tooltip>
 	{:else}
 		<a
@@ -58,15 +45,15 @@ const handleSignOut = () => {
 <main
 	class="flex w-full my-10 gap-8 lg:gap-12 px-4 md:px-12 xl:px-0 xl:w-4/5 mx-auto flex-col sm:flex-row"
 >
-	{#await data.websocketReady}
+	<!-- {#await data.websocketReady}
 		<div class="w-full h-screen flex items-center justify-center text-2xl font-semibold">
 			<Spinner color="yellow" bg="text-story-300" size={16} />
 		</div>
-	{:then}
+	{:then} -->
 		<section class="mx-auto w-full">
 			<slot />
 		</section>
-	{:catch error}
+	<!-- {:catch error}
 		<p>Error loading storylines: {error.message}</p>
-	{/await}
+	{/await} -->
 </main>

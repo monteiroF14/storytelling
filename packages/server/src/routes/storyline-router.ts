@@ -13,7 +13,7 @@ export const createStorylineRouter = (controller: StorylineController) => {
 	storylineRouter.patch("/:id/status");
 
 	// TODO: prefetch this route on storyline load
-	storylineRouter.post("/generate", controller.generateChoices);
+	// storylineRouter.post("/generate", controller.generateChoices);
 
 	return storylineRouter;
 };
