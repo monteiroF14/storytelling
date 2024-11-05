@@ -1,20 +1,21 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 
-export const load: PageLoad = async ({ parent, data }) => {
+export const load: PageLoad = async ({ data, parent }) => {
 	const parentData = await parent();
-	console.log("parent: ", parentData);
-
-	console.log("data: ", data);
 
 	const storyline = data.storyline;
 
-	if (
+	if (!parentData.user) return;
+
+	const hasPermission =
 		(storyline?.visibility === "private" &&
 			storyline.userId === parentData.user.id) ||
-		storyline?.visibility === "public"
-	) {
+		storyline?.visibility === "public";
+
+	if (hasPermission) {
 		return { storyline: storyline };
 	}
+
 	throw redirect(308, "/");
 };

@@ -1,5 +1,6 @@
 import {
 	CreateStorylineSchema,
+	type GenerateStorylineStep,
 	StorylineSchema,
 	UpdateStatusSchema,
 	UpdateStepsSchema,
@@ -7,8 +8,6 @@ import {
 } from "@storytelling/types";
 import { ValidationError } from "app/error";
 import { logger } from "app/logger";
-import axios from "axios";
-import { env } from "bun";
 import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
@@ -20,6 +19,7 @@ import {
 	type StorylineService,
 	storylineService,
 } from "../services/storyline-service";
+import { streamSSE } from "hono/streaming";
 
 export class StorylineController {
 	constructor(
@@ -174,6 +174,7 @@ export class StorylineController {
 			const storyline = await this.storylineService.read(
 				Number.parseInt(storylineId),
 			);
+
 			if (!storyline) {
 				throw new HTTPException(404, { message: "Storyline not found" });
 			}
@@ -203,7 +204,7 @@ export class StorylineController {
 				limit: limit ? Number.parseInt(limit) : undefined,
 				offset: offset ? Number.parseInt(offset) : undefined,
 				orderBy,
-				order: order === "desc" ? "desc" : "asc",
+				order: order === "DESC" ? "DESC" : "ASC",
 			};
 
 			const storylines = await this.storylineService.getStorylines(options);
@@ -233,48 +234,44 @@ export class StorylineController {
 			return c.json({ message: "Ollama Model unavailable" });
 		}
 
-		const body = await c.req.json();
-		const parsedBody = StorylineSchema.parse(body);
-
-		const prompt = this.apiModelService.buildPrompt(parsedBody);
-
 		try {
-			const responseStream = await axios({
-				method: "POST",
-				url: `${env.LLAMA_API_URL}/api/generate`,
-				data: {
-					model: this.apiModelService.OLLAMA_MODEL,
-					prompt,
-				},
-				responseType: "stream",
-			});
+			const body = await c.req.json();
+			const parsedBody = StorylineSchema.parse(body.storyline);
 
-			const chunks: Buffer[] = [];
-
-			await new Promise((resolve, reject) => {
-				responseStream.data.on("data", (chunk: Buffer) => chunks.push(chunk));
-				responseStream.data.on("end", () => {
-					const response = Buffer.concat(
-						chunks as unknown as Uint8Array[],
-					).toString("utf8");
-					resolve(response);
-				});
-				responseStream.data.on("error", reject);
-			});
-
-			const completeResponse = chunks.join("\n");
-
-			if (!completeResponse) {
-				throw new HTTPException(404, {
-					message: "No response from AI model",
+			if (parsedBody.totalSteps === null) {
+				c.status(400);
+				return c.json({
+					message: "Bad request, missing totalSteps cannot be null",
 				});
 			}
 
-			const response = this.apiModelService.pretifyResponse(completeResponse);
+			c.header("Content-Type", "text/event-stream");
+			c.header("Cache-Control", "no-cache");
 
-			return c.json(response);
+			const currentStoryline: GenerateStorylineStep = {
+				title: parsedBody.title,
+				steps: parsedBody.steps,
+			};
+
+			// RETURN THE RESPONSE AS ITS BEING GENERATED
+
+			const prompt = this.apiModelService.buildPrompt(currentStoryline);
+			const response = await this.apiModelService.fetchResponse(prompt);
+
+			// const response = await this.apiModelService.generateRecursiveSteps(
+			// 	0,
+			// 	currentStoryline,
+			// 	parsedBody.totalSteps,
+			// );
+
+			return streamSSE(c, async (stream) => {
+				await stream.writeSSE({
+					data: JSON.stringify(response),
+					event: "generate-next-step",
+				});
+			});
 		} catch (error) {
-			console.error("Error calling LLaMA:", error);
+			// console.error("Error calling LLaMA:", error);
 			return c.json({ error: "Failed to get response from LLaMA" }, 500);
 		}
 	};

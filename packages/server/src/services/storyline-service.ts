@@ -9,7 +9,7 @@ import { ValidationError } from "app/error";
 import { logger } from "app/logger";
 import { db } from "db";
 import { storyline } from "db/schema";
-import { eq, sql } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 
 export class StorylineService {
 	async updateVisibility({
@@ -170,7 +170,7 @@ export class StorylineService {
 		limit = 12,
 		offset = 0,
 		orderBy = "created",
-		order = "asc",
+		order = "ASC",
 	}: {
 		userId?: number;
 		limit?: number;
@@ -189,13 +189,16 @@ export class StorylineService {
 		}
 
 		try {
+			const orderByQuery =
+				order === "ASC" ? asc(storyline[orderBy]) : desc(storyline[orderBy]);
+
 			const result = await db
 				.select()
 				.from(storyline)
 				.where(userId ? eq(storyline.userId, userId) : undefined)
 				.limit(limit)
 				.offset(offset)
-				.orderBy(sql`${orderBy} ${order}`)
+				.orderBy(orderByQuery)
 				.all();
 
 			return result.map((storyline) => ({

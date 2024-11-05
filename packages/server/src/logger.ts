@@ -21,7 +21,8 @@ export async function logger({
 		const logs = await Bun.file(LOG_PATH).text();
 
 		const userPart = userId ? `[UserID: ${userId}]` : "";
-		const currentLog = `[${formattedDate}] [${type.toUpperCase()}] ${userPart}- ${message}`;
+		const trace = getCallTrace();
+		const currentLog = `[${formattedDate}] [${type.toUpperCase()}] ${userPart}- ${message}${trace}`;
 
 		// Append the new log with a newline
 		await Bun.write(LOG_PATH, `${logs}\n${currentLog}`);
@@ -34,4 +35,24 @@ export async function logger({
 			console.error("Failed to write logs:", e);
 		}
 	}
+}
+
+function getCallTrace(): string {
+	const stack = new Error().stack; // Capture the stack trace
+	if (!stack) return ""; // If there's no stack, return empty string
+
+	// Split the stack into lines
+	const lines = stack.split("\n");
+
+	// The first line is the error message, the second line is from `getCallTrace`,
+	// and the third line is the caller of the logger
+	const callerLine = lines[2] || ""; // This is where the logger was called from
+
+	// Use a regular expression to capture the function name and path
+	const match = callerLine.match(/at (.+?) \((.+?):(\d+):(\d+)\)/);
+	if (match) {
+		return `\nCalled from ${match[1]} in ${match[2]}:${match[3]}:${match[4]}`;
+	}
+
+	return "\nCalled from an unknown location"; // Fallback if parsing fails
 }

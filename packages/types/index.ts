@@ -34,6 +34,8 @@ export const StorylineSchema = z.object({
 });
 export type Storyline = z.infer<typeof StorylineSchema>;
 
+export type GenerateStorylineStep = Pick<Storyline, "title" | "steps">;
+
 export const UpdateVisibilitySchema = StorylineSchema.pick({
 	visibility: true,
 });

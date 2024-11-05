@@ -1,20 +1,22 @@
 <script lang="ts">
-import {
-	CHOICES,
-	MAX_AI_RETRIES,
-	MAX_DESCRIPTION_LENGTH,
-	TOTAL_STORYLINE_STEPS,
-} from "$lib/constants";
-import {
-	aiGeneratingProgress,
-	aiResponse,
-	aiResponseLoading,
-	currentStoryline,
-	storylines,
-} from "$lib/stores";
+import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
+import { currentStoryline, storylines } from "$lib/stores";
 import { sineIn } from "svelte/easing";
-import type { TextOutput } from "window.ai";
 import type { PageData } from "./$types";
+import { Drawer } from "flowbite-svelte";
+import { goto } from "$app/navigation";
+import { formatTimeAgo } from "$lib/util";
+import {
+	CheckCircleOutline,
+	ExclamationCircleOutline,
+	ArrowsRepeatOutline,
+} from "flowbite-svelte-icons";
+import { api } from "$lib/axios";
+import { onMount } from "svelte";
+import type { Storyline } from "@storytelling/types";
+import type { AxiosResponse } from "axios";
+import type { Readable } from "svelte/store";
+import { streamText } from "ai";
 
 export let data: PageData;
 
@@ -26,200 +28,60 @@ const transitionParams = {
 	easing: sineIn,
 };
 
-let aiRetryCount = 0;
-
 let defaultModal = false;
 
-let intervalId: NodeJS.Timer;
-
-// Set store value reactively
 $: if (data.storyline) {
 	currentStoryline.set(data.storyline);
 }
 
 $: storyline = data.storyline!;
 
-$: if (
-	storyline &&
-	storyline.status === "ongoing" &&
-	storyline.steps.length < (storyline.totalSteps || TOTAL_STORYLINE_STEPS)
-) {
-	const MAX_PROGRESS = 80;
-
-	aiResponseLoading.set(true);
-	aiGeneratingProgress.set(15);
-
-	intervalId = setInterval(() => {
-		aiGeneratingProgress.update((n) => (n < MAX_PROGRESS ? n + 10 : n));
-	}, 750);
-
-	fetchNextStoryStep().then(() => {
-		aiResponseLoading.set(false);
-		aiGeneratingProgress.set(100);
-		clearInterval(intervalId);
-	});
-}
+onMount(async () => {
+	await fetchNextStoryStep();
+});
 
 $: if (storyline && storyline.steps.length === storyline.totalSteps) {
 	defaultModal = true;
 }
 
 async function fetchNextStoryStep() {
-	let prompt = "";
-
-	if (aiRetryCount >= MAX_AI_RETRIES) {
-		// Reset retry count and stop loading after max retries
-		aiResponseLoading.set(false);
-		return;
-	}
-
-	++aiRetryCount;
-
-	if (storyline.steps.length === 0) {
-		prompt = `Create a storyline with the theme '${storyline.title}' that progresses through a total of ${TOTAL_STORYLINE_STEPS} steps.
-			The story should follow a logical flow, with each step building on the previous one and driving the narrative towards a satisfying conclusion in the final step.
-
-			For the first step:
-			- Provide a compelling introduction that sets the stage for the story and introduces key elements, such as setting, characters, or conflict.
-			- Generate ${CHOICES} distinct choices the player can make, each of which should have a meaningful impact on the direction of the story and offer different potential paths.
-
-			The story should be coherent and engaging, with the first step setting up a dynamic progression that leads to a natural conclusion by the last step.
-
-	    Return only a string representation of the JSON object, without any code block markers or formatting like backticks or markdown.
-
-	    The string should include:
-	    - 'description' (a concise introduction, no more than ${MAX_DESCRIPTION_LENGTH} characters)
-	    - 'choices' (an array of ${CHOICES} choices the player can make on which the choice is a string, multiple sentences or not).`;
-	} else {
-		const lastStep = storyline.steps[storyline.steps.length - 1];
-		const remainingSteps = TOTAL_STORYLINE_STEPS - storyline.steps.length;
-
-		const storylinePath = storyline.steps
-			.map((step) => step.description)
-			.join(". ");
-
-		prompt = `Continue the storyline titled "${storyline.title}".
-	    The current storyline is as follows: ${storylinePath}. The player previously chose "${lastStep.choice}".
-
-	    Please generate the next step, ensuring that the narrative remains coherent and logically follows from the player's choice and the previous events.
-
-	    For the next step:
-	    - Provide a brief description of the situation or event that happens next in the story.
-	    - Generate ${CHOICES} choices the player can make. Each choice should meaningfully affect the direction of the story and lead towards its natural progression.
-
-	    Important:
-	    - If there are ${remainingSteps} steps remaining, ensure that the story builds tension and momentum as it approaches a logical conclusion.
-	    - If this is the final step, make sure the description and choices resolve the storyline with satisfying, conclusive options. The ending should either bring closure or suggest a dramatic conclusion based on the player’s choice.
-
-	    Return the output as a JSON object with two fields:
-	    - "description" (the next part of the story, concise, no more than ${MAX_DESCRIPTION_LENGTH} characters)
-	    - "choices" (an array of ${CHOICES} possible player actions on which the choice is a string, multiple sentences or not).
-
-	    **Important**: Do not include any additional text, formatting, or markdown backticks in the response. Only return the plain JSON object.`;
-	}
+	console.log("storyline data being passed: ", data.storyline);
 
 	try {
-		aiResponseLoading.set(true);
-
-		const response = (await window.ai.generateText({
-			prompt,
-			options: {
-				numOutputs: 2,
-				maxTokens: 500,
+		const response = await api.post(
+			"/storylines/generate",
+			{
+				storyline: data.storyline,
 			},
-		})) as TextOutput[];
+			{
+				responseType: "stream",
+			},
+		);
 
-		if (
-			!response ||
-			!Array.isArray(response) ||
-			response.length === 0 ||
-			!response[0]?.text
-		) {
-			throw new Error("Invalid response from AI");
-		}
+		const chunks: Uint8Array[] = [];
+		const decoder = new TextDecoder();
 
-		let generatedResponseText = response[0].text;
+		response.data.on("data", (chunk: Uint8Array) => {
+			chunks.push(chunk);
 
-		// Check if the response contains backticks and clean them if present
-		if (generatedResponseText.includes("```")) {
-			console.warn("Backticks detected, cleaning response...");
-			generatedResponseText = generatedResponseText
-				.replace(/```json|```/g, "")
-				.trim();
-		}
+			const jsonString = decoder.decode(chunk, { stream: true });
+			const newStep = JSON.parse(jsonString);
 
-		type GeneratedResponse = {
-			description: string;
-			choices: string[];
-		};
-
-		let generatedResponse: GeneratedResponse;
-
-		try {
-			generatedResponse = JSON.parse(
-				generatedResponseText,
-			) as GeneratedResponse;
-		} catch (parseError) {
-			throw new Error(
-				`Failed to parse AI response: ${(parseError as unknown as Error).message}`,
-			);
-		}
-		let { description, choices } = generatedResponse;
-
-		if (description.length > MAX_DESCRIPTION_LENGTH) {
-			description = `${description.slice(0, MAX_DESCRIPTION_LENGTH)}...`;
-		}
-
-		aiResponse.set({
-			description: description.trim(),
-			choices: choices.map((choice: string) => choice.trim()),
+			console.log("step: ", newStep);
 		});
 
-		aiRetryCount = 0;
-		aiResponseLoading.set(false);
-	} catch (err) {
-		console.error("Error fetching next story step:", err);
+		response.data.on("end", () => {
+			const completeResponse = Buffer.concat(chunks).toString("utf8");
+			console.log("Complete response: ", JSON.parse(completeResponse));
+		});
 
-		// Retry if there are retries left, else stop loading and show "No text generated"
-		if (aiRetryCount < MAX_AI_RETRIES) {
-			await fetchNextStoryStep(); // Retry the AI call
-		} else {
-			// Exhausted retries, stop loading and clear response
-			aiResponse.set(undefined);
-			aiResponseLoading.set(false);
-		}
+		response.data.on("error", (error: Error) => {
+			console.error("Stream error:", error.message);
+		});
+	} catch (error) {
+		console.error("Error fetching the next story step:", error);
 	}
 }
-
-async function handleUserChoice(choice: string) {
-	const updatedStoryline = {
-		...storyline,
-		steps: [
-			...storyline.steps,
-			{
-				choice,
-				description: $aiResponse?.description || "",
-			},
-		],
-	};
-
-	await $page.data.wsClient?.sendMessage({
-		messageType: "edit",
-		data: {
-			userId: storyline.userId,
-			storyline: updatedStoryline,
-		},
-	});
-
-	currentStoryline.set(updatedStoryline);
-	storylines.update((list) =>
-		list.map((story) =>
-			story.id === updatedStoryline.id ? updatedStoryline : story,
-		),
-	);
-}
-
-// const handleCreateStorylineWrapper = () => handleCreateStoryline(data.wsClient!);
 </script>
 
 {#if storyline && storyline.totalSteps !== null}
@@ -291,49 +153,6 @@ async function handleUserChoice(choice: string) {
 
 	<section class="space-y-4">
 		{#if storyline.status === "ongoing"}
-			{#if $aiResponseLoading}
-				<Progressbar
-					progress={$aiGeneratingProgress}
-					animate
-					precision={2}
-					labelInside
-					tweenDuration={2000}
-					easing={sineOut}
-					size="h-6"
-					labelInsideClass="bg-story-500 text-black text-base font-medium text-center p-1 leading-none rounded-full"
-					class="my-12 bg-transparent"
-				/>
-			{:else if $aiResponse}
-				<div class="flex flex-col gap-4 my-8">
-					<p class="py-2 text-zinc-800 text-lg">{$aiResponse.description}</p>
-
-					<h3 class="text-2xl font-semibold">Make a choice:</h3>
-
-					<div class="grid grid-cols-3 gap-4 cursor-pointer">
-						{#each $aiResponse.choices as choice}
-							<button
-								on:click={() => handleUserChoice(choice)}
-								class="p-4 rounded-xl bg-story-500 text-black hover:bg-styor-700 text-justify flex items-start"
-							>
-								{choice}
-							</button>
-						{/each}
-					</div>
-				</div>
-			{:else}
-				<div class="w-full my-16 grid items-center">
-					<button
-						class="mx-auto p-4"
-						on:click={() => {
-							aiRetryCount = 0;
-							fetchNextStoryStep();
-						}}
-					>
-						<RefreshOutline class="w-[3.5rem] h-[3.5rem]" />
-					</button>
-				</div>
-			{/if}
-
 			<div class="pb-8">
 				{#each storyline.steps.slice().reverse() as storyStep}
 					<p class="py-2">{storyStep.description}</p>
@@ -361,13 +180,6 @@ async function handleUserChoice(choice: string) {
 				>No steps found!</h4
 			>
 		{/if}
-
-		<!-- {#if storyline.status === "ongoing" && storyline.steps.length === storyline.totalSteps}
-			<CongratulationsModal
-				bind:defaultModal
-				handleCreateStoryline={handleCreateStorylineWrapper}
-			/>
-		{/if} -->
 	</section>
 {:else}
 	<h2>No storyline defined!</h2>

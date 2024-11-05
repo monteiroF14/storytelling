@@ -1,7 +1,10 @@
 {
 	"compilerOptions": {
-		"esModuleInterop": true,
 		"strictNullChecks": true,
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "node",
+		"esModuleInterop": true,
 		"baseUrl": "src",
 		"paths": {
 			"app/*": ["./*"],

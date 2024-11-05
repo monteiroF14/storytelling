@@ -1,15 +1,20 @@
+import { serverApi } from "$lib/axios";
+import type { Storyline } from "@storytelling/types";
 import type { PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = ({ params }) => {
-	// const storylineId = params.id;
-	// if (!storylineId) return {};
-	// const parsedStorylineId = Number.parseInt(storylineId);
-	// const storyline = get(storylines).find(
-	// 	(storyline) => storyline.id === parsedStorylineId,
-	// );
-	// if (storyline) {
-	// 	return { storyline };
-	// }
-	// console.warn(`Storyline with ID ${parsedStorylineId} not found.`);
-	// throw redirect(308, "/");
+export const load: PageServerLoad = async ({ params, request }) => {
+	if (!params.id) return {};
+
+	const api = serverApi(request);
+	if (!api) throw "Unauthenticated";
+
+	const { data, status } = await api.get<{ storyline: Storyline }>(
+		`/storylines/${params.id}`,
+	);
+
+	if (status === 400) {
+		return { storyline: null };
+	}
+
+	return { storyline: data.storyline };
 };
