@@ -24,6 +24,8 @@ services:
     build: .
     ports:
       - "3000:3000"
+    volumes:
+      - ./packages/server/sqlite.db:/app/sqlite.db
     depends_on:
       llama:
         condition: service_healthy
@@ -34,12 +36,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    environment:
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - LLAMA_API_URL=http://llama:11434
-      - API_URL=http://localhost:3000
-      - ACCESS_TOKEN_EXPIRATION=1d
-      - REFRESH_TOKEN_EXPIRATION=54000
-      - JWT_SECRET=success
+    env_file:
+      - ./packages/server/.env
     restart: always
