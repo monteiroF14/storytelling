@@ -1,7 +1,8 @@
 import axios, { type AxiosError } from "axios";
+import { env } from "../env";
 
 export const api = axios.create({
-	baseURL: import.meta.env.VITE_API_URL,
+	baseURL: env.VITE_API_URL,
 	withCredentials: true,
 	validateStatus(status) {
 		return status < 500;
@@ -46,7 +47,7 @@ export const serverApi = (request: Request) => {
 	}
 
 	return axios.create({
-		baseURL: import.meta.env.VITE_API_URL,
+		baseURL: env.VITE_API_URL,
 		headers: {
 			Cookie: cookie || "",
 		},
