@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ request, parent }) => {
 		if (!parentData.user) throw "No parent data user";
 
 		const { data, status } = await api.get<{ storylines: Array<Storyline> }>(
-			`/storylines?userId=${parentData.user.id}&orderBy=updated&order=ASC&limit=50`,
+			`/storylines?userId=${parentData.user.id}&orderBy=updated&order=DESC&limit=50`,
 		);
 
 		if (status === 400) {

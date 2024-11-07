@@ -3,7 +3,6 @@ import {
 	type GenerateStorylineStep,
 	StorylineSchema,
 	UpdateStatusSchema,
-	UpdateStepsSchema,
 	UpdateVisibilitySchema,
 } from "@storytelling/types";
 import { ValidationError } from "app/error";
@@ -19,7 +18,6 @@ import {
 	type StorylineService,
 	storylineService,
 } from "../services/storyline-service";
-import { streamSSE } from "hono/streaming";
 
 export class StorylineController {
 	constructor(
@@ -135,11 +133,13 @@ export class StorylineController {
 			const parsedId = Number.parseInt(id);
 
 			const body = await c.req.json();
-			const validatedData = UpdateStepsSchema.parse(body);
+
+			// ! make this work with validation
+			// const validatedData = UpdateStepsSchema.parse(body);
 
 			const updatedStoryline = await this.storylineService.updateSteps({
 				id: parsedId,
-				steps: validatedData.steps,
+				steps: body.steps,
 			});
 
 			if (!updatedStoryline) {
@@ -228,7 +228,7 @@ export class StorylineController {
 		}
 	};
 
-	generateChoices = async (c: Context) => {
+	generate = async (c: Context) => {
 		if (!this.apiModelService.isModelAvailable) {
 			c.status(503);
 			return c.json({ message: "Ollama Model unavailable" });
@@ -247,35 +247,72 @@ export class StorylineController {
 
 			c.header("Content-Type", "text/event-stream");
 			c.header("Cache-Control", "no-cache");
+			c.header("Connection", "keep-alive");
 
 			const currentStoryline: GenerateStorylineStep = {
 				title: parsedBody.title,
 				steps: parsedBody.steps,
 			};
 
-			// RETURN THE RESPONSE AS ITS BEING GENERATED
-
 			const prompt = this.apiModelService.buildPrompt(currentStoryline);
-			const response = await this.apiModelService.fetchResponse(prompt);
+			const responseStream = await this.apiModelService.fetchResponse(prompt);
 
-			// const response = await this.apiModelService.generateRecursiveSteps(
-			// 	0,
-			// 	currentStoryline,
-			// 	parsedBody.totalSteps,
-			// );
+			const reader = responseStream.getReader();
 
-			return streamSSE(c, async (stream) => {
-				await stream.writeSSE({
-					data: JSON.stringify(response),
-					event: "generate-next-step",
-				});
-			});
+			let fullResponse = "";
+
+			// TRANSFORM THE DATA HERE, MAKE RETURN A JSON
+
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				const parsedResponse: {
+					model: string;
+					created_at: Date;
+					response: string;
+					done: boolean;
+				} = JSON.parse(value);
+
+				fullResponse += parsedResponse.response;
+
+				if (parsedResponse.done === true) {
+					break;
+				}
+			}
+
+			return c.json({ response: fullResponse });
 		} catch (error) {
 			// console.error("Error calling LLaMA:", error);
 			return c.json({ error: "Failed to get response from LLaMA" }, 500);
 		}
 	};
 }
+
+// const response = new Response(
+// 	(async function* () {
+// 		yield "hello";
+// 		yield "world";
+// 	})(),
+// );
+
+// const response = new Response({
+// 	[Symbol.asyncIterator]: async function* () {
+// 		yield "hello";
+// 		yield "world";
+// 	},
+// });
+
+// await response.text();
+
+// const response = new Response({
+// 	[Symbol.asyncIterator]: async function* () {
+// 		const controller = yield "hello";
+// 		await controller.end();
+// 	},
+// });
+
+// await response.text();
 
 export const storylineController = new StorylineController(
 	storylineService,

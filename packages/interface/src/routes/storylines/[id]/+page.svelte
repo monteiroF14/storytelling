@@ -1,24 +1,27 @@
 <script lang="ts">
 import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
-import { currentStoryline, storylines } from "$lib/stores";
-import { sineIn } from "svelte/easing";
-import type { PageData } from "./$types";
-import { Drawer } from "flowbite-svelte";
+import {
+	aiResponse,
+	aiResponseLoading,
+	currentStoryline,
+	storylines,
+} from "$lib/stores";
+import { quintOut, sineIn } from "svelte/easing";
+import { Drawer, Alert } from "flowbite-svelte";
 import { goto } from "$app/navigation";
 import { formatTimeAgo } from "$lib/util";
 import {
 	CheckCircleOutline,
 	ExclamationCircleOutline,
 	ArrowsRepeatOutline,
+	InfoCircleSolid,
 } from "flowbite-svelte-icons";
 import { api } from "$lib/axios";
-import { onMount } from "svelte";
 import type { Storyline } from "@storytelling/types";
-import type { AxiosResponse } from "axios";
-import type { Readable } from "svelte/store";
-import { streamText } from "ai";
+import { fade, slide } from "svelte/transition";
 
-export let data: PageData;
+let validationError: string;
+let showAlert = false;
 
 let hidden = true;
 
@@ -30,75 +33,89 @@ const transitionParams = {
 
 let defaultModal = false;
 
-$: if (data.storyline) {
-	currentStoryline.set(data.storyline);
+$: if (
+	$currentStoryline &&
+	$currentStoryline.status === "ongoing" &&
+	$currentStoryline.steps.length <
+		($currentStoryline.totalSteps || TOTAL_STORYLINE_STEPS)
+) {
+	aiResponseLoading.set(true);
+	fetchNextStoryStep().finally(() => {
+		aiResponseLoading.set(false);
+	});
 }
 
-$: storyline = data.storyline!;
-
-onMount(async () => {
-	await fetchNextStoryStep();
-});
-
-$: if (storyline && storyline.steps.length === storyline.totalSteps) {
+$: if ($currentStoryline?.steps?.length === $currentStoryline.totalSteps) {
 	defaultModal = true;
 }
 
 async function fetchNextStoryStep() {
-	console.log("storyline data being passed: ", data.storyline);
-
 	try {
-		const response = await api.post(
-			"/storylines/generate",
-			{
-				storyline: data.storyline,
-			},
-			{
-				responseType: "stream",
-			},
-		);
-
-		const chunks: Uint8Array[] = [];
-		const decoder = new TextDecoder();
-
-		response.data.on("data", (chunk: Uint8Array) => {
-			chunks.push(chunk);
-
-			const jsonString = decoder.decode(chunk, { stream: true });
-			const newStep = JSON.parse(jsonString);
-
-			console.log("step: ", newStep);
+		const response = await api.post("/storylines/generate", {
+			storyline: $currentStoryline,
 		});
-
-		response.data.on("end", () => {
-			const completeResponse = Buffer.concat(chunks).toString("utf8");
-			console.log("Complete response: ", JSON.parse(completeResponse));
-		});
-
-		response.data.on("error", (error: Error) => {
-			console.error("Stream error:", error.message);
-		});
+		const parsed = JSON.parse(response.data.response);
+		aiResponse.set(parsed);
 	} catch (error) {
+		showAlert = true;
+
+		if (error instanceof Error) {
+			validationError = error.message;
+		}
+
 		console.error("Error fetching the next story step:", error);
+
+		setTimeout(() => {
+			showAlert = false;
+		}, 3000);
 	}
+}
+
+async function handleUserChoice(choice: string) {
+	const updatedStoryline = {
+		...$currentStoryline,
+		steps: [
+			...$currentStoryline.steps,
+			{
+				choice,
+				description: $aiResponse?.description || "",
+			},
+		],
+	};
+
+	const { data, status } = await api.patch<{ storyline: Storyline }>(
+		`/storylines/${updatedStoryline.id}/steps`,
+		{
+			steps: updatedStoryline.steps,
+		},
+	);
+
+	if (status !== 200) throw new Error("Error updating storyline");
+
+	currentStoryline.set(data.storyline);
+	storylines.update((list) =>
+		list.map((story) =>
+			story.id === updatedStoryline.id ? updatedStoryline : story,
+		),
+	);
 }
 </script>
 
-{#if storyline && storyline.totalSteps !== null}
-	<section class="w-full">
+{#if $currentStoryline}
+	<header class="w-full">
 		<div class="flex items-center justify-between">
-			<h2 class="text-4xl font-bold text-black">{storyline.title}</h2>
+			<h2 class="text-4xl font-bold text-black">{$currentStoryline.title}</h2>
 			<button on:click={() => (hidden = false)}>
 				<ArrowsRepeatOutline class="h-[2.5em] w-[2.5em]" />
 			</button>
 		</div>
-		{#if storyline.status === "ongoing"}
+		{#if $currentStoryline.status === "ongoing"}
 			<p class="pt-1 text-xl text-zinc-600 font-semibold">
-				{storyline.steps.length} out of
-				<span>{storyline.totalSteps ?? TOTAL_STORYLINE_STEPS} steps</span>
+				{$currentStoryline.steps.length} out of
+				<span>{$currentStoryline.totalSteps ?? TOTAL_STORYLINE_STEPS} steps</span>
 			</p>
 		{/if}
-	</section>
+	</header>
 
 	<Drawer
 		transitionType="fly"
@@ -152,9 +169,42 @@ async function fetchNextStoryStep() {
 	</Drawer>
 
 	<section class="space-y-4">
-		{#if storyline.status === "ongoing"}
+		{#if $currentStoryline.status === "ongoing"}
+			{#if $aiResponseLoading}
+				<p class="mt-6 font-semibold">Loading..</p>
+			{:else if $aiResponse}
+				<div class="flex flex-col gap-4 my-8">
+					<p class="py-2 text-zinc-800">{$aiResponse.description}</p>
+					<h3 class="text-xl font-semibold">Make a choice:</h3>
+					<div class="grid grid-cols-3 gap-4 cursor-pointer">
+						{#each $aiResponse.choices as choice}
+							<button
+								on:click={() => handleUserChoice(choice)}
+								class="p-4 rounded-xl bg-story-500 text-black hover:bg-styor-700 text-justify flex items-start text-sm"
+							>
+								{choice}
+							</button>
+						{/each}
+					</div>
+				</div>
+			{:else}
+				<p class="text-red-500 font-semibold text-xl">Failed to load response!</p>
+
+				{#if showAlert}
+					<div in:slide={{ delay: 250, duration: 300, easing: quintOut, axis: "x" }} out:fade|local>
+						{#if validationError}
+							<Alert color="red" class="absolute right-12 bottom-12 text-lg" dismissable>
+								<InfoCircleSolid slot="icon" class="w-8 h-8" />
+								<span class="font-semibold">Error!</span>
+								Storyline title cannot be empty.
+							</Alert>
+						{/if}
+					</div>
+				{/if}
+			{/if}
+
 			<div class="pb-8">
-				{#each storyline.steps.slice().reverse() as storyStep}
+				{#each $currentStoryline.steps.reverse() as storyStep}
 					<p class="py-2">{storyStep.description}</p>
 					<p class="py-2">
 						You previously chose: <span class="font-semibold">{storyStep.choice}</span>
@@ -162,10 +212,12 @@ async function fetchNextStoryStep() {
 					<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
 				{/each}
 			</div>
-		{:else if storyline.steps.length > 0}
+		{:else if $currentStoryline.steps?.length > 0}
+      <!-- MEANING STORYLINE IS COMPLETED -->
+
 			<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
 			<div class="pb-8">
-				{#each storyline.steps.slice().reverse() as storyStep}
+				{#each $currentStoryline.steps.reverse() as storyStep}
 					<div class="space-y-2">
 						<p class="py-2 text-left">{storyStep.description}</p>
 						<p class="py-2 text-left">

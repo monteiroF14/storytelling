@@ -1,7 +1,6 @@
 import type { GenerateStorylineStep } from "@storytelling/types";
 import axios from "axios";
 import { env } from "bun";
-import { HTTPException } from "hono/http-exception";
 
 type GeneratedResponse = {
 	description: string;
@@ -10,7 +9,7 @@ type GeneratedResponse = {
 
 export class ApiModelService {
 	isModelAvailable = false;
-	OLLAMA_MODEL = "tinyllama";
+	OLLAMA_MODEL = "llama3.2";
 
 	async initializeModel() {
 		try {
@@ -32,20 +31,25 @@ export class ApiModelService {
 		const STORYLINE_CHOICES = 3;
 
 		if (steps.length === 0) {
-			prompt = `Create a storyline with the theme '${title}' that progresses through a total of ${TOTAL_STORYLINE_STEPS} steps.
-			The story should follow a logical flow, with each step building on the previous one and driving the narrative towards a satisfying conclusion in the final step.
+			prompt = `
+Create a storyline with the theme '${title}' that progresses through ${TOTAL_STORYLINE_STEPS} steps.
+The storyline should follow a logical flow, with each step building on the previous one and leading towards a satisfying conclusion at the final step.
 
-			For the first step:
-			- Provide a compelling introduction that sets the stage for the story and introduces key elements, such as setting, characters, or conflict.
-			- Generate ${STORYLINE_CHOICES} distinct choices the player can make, each of which should have a meaningful impact on the direction of the story and offer different potential paths.
+**Provide output as a JSON object** for the first step in the following structure:
 
-			The story should be coherent and engaging, with the first step setting up a dynamic progression that leads to a natural conclusion by the last step.
+{
+  "description": "A introduction to the storyline and initial setting or conflict.",
+  "choices": [
+    "First choice, phrased as a single or multi-sentence option.",
+    "Second choice, phrased as a single or multi-sentence option.",
+    ...
+  ]
+}
 
-			Return only a string representation of the JSON object, without any code block markers or formatting like backticks or markdown.
+The description should be concise and deep, setting up key elements like the setting, characters, and conflict. The choices should each offer a distinct direction that impacts the story's progression and there should be only ${STORYLINE_CHOICES} choices.
 
-			The string should include:
-			- 'description' (a concise introduction)
-			- 'choices' (an array of ${STORYLINE_CHOICES} choices the player can make on which the choice is a string, multiple sentences or not).`;
+**Do not include any text outside of the JSON object.**
+`;
 		} else {
 			// Continuation prompt for an existing storyline
 			const lastStep = steps[steps.length - 1];
@@ -93,74 +97,85 @@ export class ApiModelService {
 		}
 	}
 
-	async fetchResponse(prompt: string): Promise<GeneratedResponse> {
-		const responseStream = await axios({
+	async fetchResponse(prompt: string): Promise<ReadableStream> {
+		const response = await fetch(`${env.LLAMA_API_URL}/api/generate`, {
 			method: "POST",
-			url: `${env.LLAMA_API_URL}/api/generate`,
-			data: {
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
 				model: this.OLLAMA_MODEL,
 				prompt,
+				format: "json",
+			}),
+		});
+
+		return new ReadableStream({
+			async start(controller) {
+				if (!response.body) {
+					throw new Error("ReadableStream not supported!");
+				}
+
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder("utf-8");
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					controller.enqueue(decoder.decode(value, { stream: true }));
+				}
+
+				controller.close();
 			},
-			responseType: "stream",
 		});
-
-		// console.log("response stream:  ", responseStream);
-
-		const chunks: Buffer[] = [];
-		await new Promise((resolve, reject) => {
-			responseStream.data.on("data", (chunk: Buffer) => chunks.push(chunk));
-			responseStream.data.on("end", (chunk) => resolve(chunk));
-			responseStream.data.on("error", reject);
-		});
-
-		const completeResponse = Buffer.concat(chunks).toString("utf8");
-		console.log("complete: ", completeResponse);
-		if (!completeResponse) {
-			throw new HTTPException(404, {
-				message: "No response from AI model",
-			});
-		}
-
-		const prettyResponse = this.pretifyResponse(completeResponse);
-		console.log("res: ", prettyResponse);
-
-		return prettyResponse;
 	}
 
-	async generateRecursiveSteps(
-		currentStepIndex: number,
-		currentStoryline: GenerateStorylineStep,
-		totalSteps: number,
-	): Promise<GenerateStorylineStep> {
-		if (currentStepIndex >= totalSteps) {
-			return currentStoryline;
-		}
-
-		const prompt = await this.buildPrompt(currentStoryline);
-
-		try {
-			const { description, choices } = await this.fetchResponse(prompt);
-			console.log("fetched: ", description, choices);
-
-			currentStoryline.steps.push({ description, choice: "" });
-
-			for (const choice of choices) {
-				const nextStoryline = { ...currentStoryline };
-				nextStoryline.steps[currentStepIndex].choice = choice;
-
-				await this.generateRecursiveSteps(
-					currentStepIndex + 1,
-					nextStoryline,
-					totalSteps,
-				);
-			}
-
-			return currentStoryline;
-		} catch (e) {
-			// console.error("Error calling LLaMA:", e);
-			throw new Error("Failed to generate choices");
-		}
+	async fetchDummyResponse(): Promise<ReadableStream> {
+		return new ReadableStream({
+			start: (controller) => {
+				controller.enqueue("Hello");
+				setTimeout(() => {
+					controller.enqueue("World");
+					controller.close();
+				}, 3000);
+			},
+		});
 	}
+
+	// async generateRecursiveSteps(
+	// 	currentStepIndex: number,
+	// 	currentStoryline: GenerateStorylineStep,
+	// 	totalSteps: number,
+	// ): Promise<GenerateStorylineStep> {
+	// 	if (currentStepIndex >= totalSteps) {
+	// 		return currentStoryline;
+	// 	}
+
+	// 	const prompt = await this.buildPrompt(currentStoryline);
+
+	// 	try {
+	// 		const { description, choices } = await this.fetchResponse(prompt);
+	// 		console.log("fetched: ", description, choices);
+
+	// 		currentStoryline.steps.push({ description, choice: "" });
+
+	// 		for (const choice of choices) {
+	// 			const nextStoryline = { ...currentStoryline };
+	// 			nextStoryline.steps[currentStepIndex].choice = choice;
+
+	// 			await this.generateRecursiveSteps(
+	// 				currentStepIndex + 1,
+	// 				nextStoryline,
+	// 				totalSteps,
+	// 			);
+	// 		}
+
+	// 		return currentStoryline;
+	// 	} catch (e) {
+	// 		// console.error("Error calling LLaMA:", e);
+	// 		throw new Error("Failed to generate choices");
+	// 	}
+	// }
 }
 
 export const apiModelService = new ApiModelService();

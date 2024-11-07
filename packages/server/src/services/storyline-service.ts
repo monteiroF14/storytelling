@@ -58,14 +58,9 @@ export class StorylineService {
 				.returning()
 				.get();
 
-			const { status } = UpdateStatusSchema.parse(query.status);
-			const { visibility } = UpdateVisibilitySchema.parse(query.visibility);
-
 			return {
 				...query,
-				steps,
-				status,
-				visibility,
+				steps: JSON.parse(query.steps),
 			};
 		} catch (e) {
 			logger({

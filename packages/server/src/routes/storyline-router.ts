@@ -8,12 +8,12 @@ export const createStorylineRouter = (controller: StorylineController) => {
 	storylineRouter.get("/:storylineId", controller.getStoryline);
 	storylineRouter.post("/", controller.createStoryline);
 
-	storylineRouter.patch("/:id/visibility");
-	storylineRouter.patch("/:id/steps");
-	storylineRouter.patch("/:id/status");
+	storylineRouter.patch("/:id/visibility", controller.updateVisibility);
+	storylineRouter.patch("/:id/steps", controller.updateSteps);
+	storylineRouter.patch("/:id/status", controller.updateStatus);
 
 	// TODO: prefetch this route on storyline load
-	storylineRouter.post("/generate", controller.generateChoices);
+	storylineRouter.post("/generate", controller.generate);
 
 	return storylineRouter;
 };

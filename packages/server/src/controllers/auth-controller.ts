@@ -91,8 +91,6 @@ class AuthController {
 		const user = await this.userService.exists(data.email);
 
 		if (user) {
-			// c.set("user", user);
-
 			const payload = jwt.sign(
 				JSON.stringify({
 					id: user.id,

@@ -14,7 +14,9 @@ class UserController {
 		try {
 			const authCookie = getCookie(c, "auth");
 			if (!authCookie) {
-				return c.notFound();
+				throw new HTTPException(400, {
+					message: "Missing auth cookie",
+				});
 			}
 
 			const payload = (await jwt.verify(

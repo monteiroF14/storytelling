@@ -40,7 +40,7 @@ async function handleSignOut(): Promise<void> {
 			class="px-4 py-2 rounded-full font-semibold text-xl"
 			on:click={handleSignOut}
 			title="Sign Out">
-        <img src={$page.data.user.picture} alt="profile" class="size-10 rounded-full cursor-pointer">
+        <img src={$page.data.user.picture} alt="profile" class="size-10 rounded-full cursor-pointer" fetchpriority="high" referrerpolicy="no-referrer">
     </button>
 		<Tooltip placement="bottom">Sign Out</Tooltip>
 	{:else}

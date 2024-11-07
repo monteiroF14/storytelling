@@ -1,5 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
+import { currentStoryline } from "$lib/stores";
 
 export const load: PageLoad = async ({ data, parent }) => {
 	const parentData = await parent();
@@ -14,7 +15,8 @@ export const load: PageLoad = async ({ data, parent }) => {
 		storyline?.visibility === "public";
 
 	if (hasPermission) {
-		return { storyline: storyline };
+		currentStoryline.set(storyline);
+		return;
 	}
 
 	throw redirect(308, "/");
