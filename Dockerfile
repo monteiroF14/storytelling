@@ -6,9 +6,6 @@ WORKDIR /app
 
 COPY ./package.json ./bun.lockb ./
 
-COPY ./packages/server ./packages/server
-COPY ./packages/types ./packages/types
-
 RUN bun install --scope=server --scope=types
 
 WORKDIR /app/packages/server

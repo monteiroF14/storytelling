@@ -25,7 +25,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./packages/server/sqlite.db:/app/sqlite.db
+      - ./packages/server:/app/packages/server
+      - ./packages/types:/app/packages/types
     depends_on:
       llama:
         condition: service_healthy
