@@ -1,10 +1,10 @@
 <script lang="ts">
 import "../app.css";
-import { PlusOutline } from "flowbite-svelte-icons";
-import { Tooltip, Spinner } from "flowbite-svelte";
+import { invalidateAll } from "$app/navigation";
 import { page } from "$app/stores";
 import { api } from "$lib/axios";
-import { invalidateAll } from "$app/navigation";
+import { Spinner, Tooltip } from "flowbite-svelte";
+import { PlusOutline } from "flowbite-svelte-icons";
 import { onMount } from "svelte";
 
 let isLoading = true;
@@ -58,7 +58,7 @@ async function handleSignOut(): Promise<void> {
 			<Spinner color="yellow" bg="text-story-300" size={16} />
 		</div>
 	{:else}
-		<section class="mx-auto w-full">
+		<section class="mx-auto w-full flex flex-col gap-4">
 			<slot />
 		</section>
 	{/if}

@@ -15,7 +15,7 @@ export const storyline = sqliteTable("storyline", {
 		.notNull()
 		.references(() => user.id),
 	title: text("title").notNull(),
-	steps: text("steps").notNull().default("[]"), // json array with all storyline data
+	chapters: text("chapters").notNull().default("[]"),
 	totalSteps: integer("total_steps"), // number of steps a storyline has
 	status: text("status").default("ongoing").notNull(),
 	visibility: text("visibility").default("public").notNull(),

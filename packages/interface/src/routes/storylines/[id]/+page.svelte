@@ -1,4 +1,6 @@
 <script lang="ts">
+import { goto } from "$app/navigation";
+import { api } from "$lib/axios";
 import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
 import {
 	aiResponse,
@@ -6,18 +8,16 @@ import {
 	currentStoryline,
 	storylines,
 } from "$lib/stores";
-import { quintOut, sineIn } from "svelte/easing";
-import { Drawer, Alert } from "flowbite-svelte";
-import { goto } from "$app/navigation";
 import { formatTimeAgo } from "$lib/util";
+import type { Storyline, StorylineChapter } from "@storytelling/types";
+import { Alert, Drawer } from "flowbite-svelte";
 import {
+	ArrowsRepeatOutline,
 	CheckCircleOutline,
 	ExclamationCircleOutline,
-	ArrowsRepeatOutline,
 	InfoCircleSolid,
 } from "flowbite-svelte-icons";
-import { api } from "$lib/axios";
-import type { Storyline } from "@storytelling/types";
+import { quintOut, sineIn } from "svelte/easing";
 import { fade, slide } from "svelte/transition";
 
 let validationError: string;
@@ -36,7 +36,7 @@ let defaultModal = false;
 $: if (
 	$currentStoryline &&
 	$currentStoryline.status === "ongoing" &&
-	$currentStoryline.steps.length <
+	$currentStoryline.chapters.length <
 		($currentStoryline.totalSteps || TOTAL_STORYLINE_STEPS)
 ) {
 	aiResponseLoading.set(true);
@@ -45,7 +45,7 @@ $: if (
 	});
 }
 
-$: if ($currentStoryline?.steps?.length === $currentStoryline.totalSteps) {
+$: if ($currentStoryline?.chapters?.length === $currentStoryline.totalSteps) {
 	defaultModal = true;
 }
 
@@ -71,22 +71,22 @@ async function fetchNextStoryStep() {
 	}
 }
 
-async function handleUserChoice(choice: string) {
+async function handleUserChoice(choice: StorylineChapter["choice"]) {
 	const updatedStoryline = {
 		...$currentStoryline,
-		steps: [
-			...$currentStoryline.steps,
+		chapters: [
+			...$currentStoryline.chapters,
 			{
 				choice,
 				description: $aiResponse?.description || "",
 			},
 		],
-	};
+	} satisfies Storyline;
 
 	const { data, status } = await api.patch<{ storyline: Storyline }>(
-		`/storylines/${updatedStoryline.id}/steps`,
+		`/storylines/${updatedStoryline.id}/chapters`,
 		{
-			steps: updatedStoryline.steps,
+			chapters: updatedStoryline.chapters,
 		},
 	);
 
@@ -111,7 +111,7 @@ async function handleUserChoice(choice: string) {
 		</div>
 		{#if $currentStoryline.status === "ongoing"}
 			<p class="pt-1 text-xl text-zinc-600 font-semibold">
-				{$currentStoryline.steps.length} out of
+				{$currentStoryline.chapters.length} out of
 				<span>{$currentStoryline.totalSteps ?? TOTAL_STORYLINE_STEPS} steps</span>
 			</p>
 		{/if}
@@ -157,7 +157,7 @@ async function handleUserChoice(choice: string) {
 									{/if}
 								</p>
 								<p>
-									<span class="font-bold">{storyline.steps.length}</span> /
+									<span class="font-bold">{storyline.chapters.length}</span> /
 									<span class="font-bold">{storyline.totalSteps || "∞"}</span>
 								</p>
 							</section>
@@ -171,9 +171,9 @@ async function handleUserChoice(choice: string) {
 	<section class="space-y-4">
 		{#if $currentStoryline.status === "ongoing"}
 			{#if $aiResponseLoading}
-				<p class="mt-6 font-semibold">Loading..</p>
+				<p class="font-semibold">Loading..</p>
 			{:else if $aiResponse}
-				<div class="flex flex-col gap-4 my-8">
+				<div class="flex flex-col gap-4 mb-8">
 					<p class="py-2 text-zinc-800">{$aiResponse.description}</p>
 					<h3 class="text-xl font-semibold">Make a choice:</h3>
 					<div class="grid grid-cols-3 gap-4 cursor-pointer">
@@ -182,7 +182,7 @@ async function handleUserChoice(choice: string) {
 								on:click={() => handleUserChoice(choice)}
 								class="p-4 rounded-xl bg-story-500 text-black hover:bg-styor-700 text-justify flex items-start text-sm"
 							>
-								{choice}
+								{choice.synopsis}
 							</button>
 						{/each}
 					</div>
@@ -204,24 +204,24 @@ async function handleUserChoice(choice: string) {
 			{/if}
 
 			<div class="pb-8">
-				{#each $currentStoryline.steps.reverse() as storyStep}
+				{#each $currentStoryline.chapters.reverse() as storyStep}
 					<p class="py-2">{storyStep.description}</p>
 					<p class="py-2">
-						You previously chose: <span class="font-semibold">{storyStep.choice}</span>
+						{storyStep.choice.text}
 					</p>
 					<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
 				{/each}
 			</div>
-		{:else if $currentStoryline.steps?.length > 0}
+		{:else if $currentStoryline.chapters?.length > 0}
       <!-- MEANING STORYLINE IS COMPLETED -->
 
 			<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
 			<div class="pb-8">
-				{#each $currentStoryline.steps.reverse() as storyStep}
+				{#each $currentStoryline.chapters.reverse() as storyStep}
 					<div class="space-y-2">
 						<p class="py-2 text-left">{storyStep.description}</p>
 						<p class="py-2 text-left">
-							You previously chose: <span class="font-semibold">{storyStep.choice}</span>
+							{storyStep.choice.text}
 						</p>
 					</div>
 					<hr class="my-4 border-1 border-gray-200 last-of-type:hidden" />

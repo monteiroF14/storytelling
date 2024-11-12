@@ -9,7 +9,7 @@ export const createStorylineRouter = (controller: StorylineController) => {
 	storylineRouter.post("/", controller.createStoryline);
 
 	storylineRouter.patch("/:id/visibility", controller.updateVisibility);
-	storylineRouter.patch("/:id/steps", controller.updateSteps);
+	storylineRouter.patch("/:id/chapters", controller.updateChapters);
 	storylineRouter.patch("/:id/status", controller.updateStatus);
 
 	// TODO: prefetch this route on storyline load

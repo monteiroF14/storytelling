@@ -1,9 +1,19 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import { api } from "$lib/axios";
 import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
 import { storylineTitleInput } from "$lib/stores";
-import type { WebSocketClient } from "$lib/web-socket-client";
 import type { User } from "@storytelling/types";
+import { Alert } from "flowbite-svelte";
+import {
+	CloseCircleSolid,
+	InfoCircleSolid,
+	WandMagicSparklesOutline,
+} from "flowbite-svelte-icons";
+import { quintOut } from "svelte/easing";
+import { fade, slide } from "svelte/transition";
+import { env } from "../../../env";
 
 let validationError: string;
 let showAlert = false;
@@ -21,32 +31,32 @@ function handleCreateStorylineFormSubmit(e: Event) {
 		validationError = "Title cannot be empty!";
 	} else {
 		handleCreateStoryline();
-		goto(`/storylines/${$currentStoryline.id}`, { replaceState: true });
 	}
 }
 
 async function handleCreateStoryline() {
 	const user: User = $page.data.user;
-	const wsClient: WebSocketClient = $page.data.wsClient;
 
-	if (!user) throw new Error("no user found");
-	if (!wsClient) throw new Error("no wsClient found");
-
-	// TODO: ALTER TYPE STRUCUTRE TO CREATE A NEW STORYLINE, ONLY NEEDS TITLE AND STEPS FIELDS
-	const response = await wsClient.sendMessage({
-		messageType: "create",
-		data: {
-			userId: user.id,
-			storyline: {
-				title: $storylineTitleInput,
-				totalSteps: TOTAL_STORYLINE_STEPS,
-			},
-		},
+	const { data, status } = await api.post("/storylines/", {
+		title: $storylineTitleInput,
+		totalSteps: TOTAL_STORYLINE_STEPS,
+		userId: user.id,
 	});
 
-	if (response?.storyline) {
+	if (status !== 201) {
+		showAlert = true;
+
+		setTimeout(() => {
+			showAlert = false;
+		}, 3000);
+
+		validationError = "Error while creating storyline";
+		throw new Error("Error while creating storyline");
+	}
+
+	if (data?.storyline) {
 		storylineTitleInput.set("");
-		goto(`/storylines/${response.storyline.id}`, { replaceState: true });
+		goto(`/storylines/${data.storyline.id}`, { replaceState: true });
 	}
 }
 </script>
@@ -88,7 +98,7 @@ async function handleCreateStoryline() {
 				<Alert color="red" class="absolute right-12 bottom-12 text-lg" dismissable>
 					<InfoCircleSolid slot="icon" class="w-8 h-8" />
 					<span class="font-semibold">Error!</span>
-					Storyline title cannot be empty.
+					{validationError}
 				</Alert>
 			{:else}
 				<Alert color="green" class="absolute right-12 bottom-12 text-lg" dismissable>

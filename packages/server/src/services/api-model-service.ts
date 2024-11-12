@@ -1,4 +1,4 @@
-import type { GenerateStorylineStep } from "@storytelling/types";
+import type { GenerateStorylineChapter } from "@storytelling/types";
 import axios from "axios";
 import { env } from "bun";
 
@@ -24,77 +24,84 @@ export class ApiModelService {
 		}
 	}
 
-	buildPrompt({ title, steps }: GenerateStorylineStep): string {
+	buildPrompt({ title, chapters }: GenerateStorylineChapter): string {
 		let prompt = "";
 
-		const TOTAL_STORYLINE_STEPS = 8;
+		const TOTAL_STORYLINE_CHAPTERS = 8;
 		const STORYLINE_CHOICES = 3;
 
-		if (steps.length === 0) {
+		if (chapters.length === 0) {
+			// Initial prompt for the first chapter
 			prompt = `
-Create a storyline with the theme '${title}' that progresses through ${TOTAL_STORYLINE_STEPS} steps.
-The storyline should follow a logical flow, with each step building on the previous one and leading towards a satisfying conclusion at the final step.
+Create an immersive storyline with the central theme of '${title}', designed to unfold over ${TOTAL_STORYLINE_CHAPTERS} interconnected chapters.
+Each chapter should be meticulously crafted, developing the setting, characters, and core conflict progressively, leading to a climax and a fulfilling resolution in the final chapter.
 
-**Provide output as a JSON object** for the first step in the following structure:
+Begin by generating the **first chapter** as a JSON object in the following format:
 
 {
-  "description": "A introduction to the storyline and initial setting or conflict.",
+  "description": "An elaborate introduction to the storyline, capturing the ambiance, characters, and underlying conflict.",
   "choices": [
-    "First choice, phrased as a single or multi-sentence option.",
-    "Second choice, phrased as a single or multi-sentence option.",
+    {
+      "text": "A vivid description of the first choice, explaining its potential impact and where it might lead the storyline.",
+      "synopsis": "A succinct but insightful summary of this choice’s direction."
+    },
+    {
+      "text": "A richly detailed description of the second choice.",
+      "synopsis": "A concise yet informative summary of this choice’s implications."
+    },
     ...
   ]
 }
 
-The description should be concise and deep, setting up key elements like the setting, characters, and conflict. The choices should each offer a distinct direction that impacts the story's progression and there should be only ${STORYLINE_CHOICES} choices.
+Each chapter should convey depth, complexity, and suspense, drawing the player into the evolving plot. In this first chapter, focus on establishing the core storyline elements, while making each choice distinct and meaningful. For each choice, include:
+- A **"text" field** with a detailed explanation of the choice's impact on the storyline, highlighting its potential consequences.
+- A **"synopsis" field** summarizing the direction in which the choice might lead.
 
-**Do not include any text outside of the JSON object.**
+**Do not include any text outside of the JSON object. Only return the structured JSON as specified.**
 `;
 		} else {
 			// Continuation prompt for an existing storyline
-			const lastStep = steps[steps.length - 1];
-			const remainingSteps = TOTAL_STORYLINE_STEPS - steps.length;
-			const storylinePath = steps.map((step) => step.description).join(". ");
+			const lastChapter = chapters[chapters.length - 1];
+			const remainingChapters = TOTAL_STORYLINE_CHAPTERS - chapters.length;
+			const storylinePath = chapters.map((step) => step.description).join(". ");
 
-			prompt = `Continue the storyline titled "${title}".
-			The current storyline is as follows: ${storylinePath}. The player previously chose "${lastStep.choice}".
+			prompt = `
+Continue the development of the storyline titled "${title}", seamlessly connecting the next chapter to the established narrative:
+"${storylinePath}." The last choice made was: "${lastChapter.choice.text}".
 
-			Please generate the next step, ensuring that the narrative remains coherent and logically follows from the player's choice and the previous events.
+For this upcoming chapter, delve into the consequences of recent choices and explore how they shape the unfolding events, building on previous conflicts, relationships, and the storyline's overall trajectory.
 
-			For the next step:
-			- Provide a brief description of the situation or event that happens next in the story.
-			- Generate ${STORYLINE_CHOICES} choices the player can make. Each choice should meaningfully affect the direction of the story and lead towards its natural progression.
+Generate the **next chapter** in the format below, following these detailed instructions:
+- Provide an **intricate description** of the scene or critical event occurring at this stage, with complex layers of emotion, action, or suspense as appropriate.
+- Design ${STORYLINE_CHOICES} choice options, each offering a distinct path forward with:
+  - A **"text" field** describing the choice in detail, conveying the gravity and potential consequences of selecting it.
+  - A **"synopsis" field** with a concise, insightful preview of where this choice might lead, guiding the player’s expectations.
 
-			Important:
-			- If there are ${remainingSteps} steps remaining, ensure that the story builds tension and momentum as it approaches a logical conclusion.
-			- If this is the final step, make sure the description and choices resolve the storyline with satisfying, conclusive options. The ending should either bring closure or suggest a dramatic conclusion based on the player’s choice.
+Take into account:
+- If there are ${remainingChapters} chapters remaining, enhance the storyline with escalating tension, subtle foreshadowing, or complex narrative twists as the story builds toward its climax.
+- If this is the **final chapter**, resolve the storyline in a powerful, satisfying way. The final choices should present meaningful outcomes that bring closure to the storyline’s central themes, character arcs, or conflicts.
 
-			Return the output as a JSON object with two fields:
-			- "description"
-			- "choices" (an array of ${STORYLINE_CHOICES} possible player actions on which the choice is a string, multiple sentences or not).
+Return the result strictly in this JSON structure:
 
-			**Important**: Do not include any additional text, formatting, or markdown backticks in the response. Only return the plain JSON object.`;
+{
+  "description": "A detailed, engaging description of the current situation or event in the storyline.",
+  "choices": [
+    {
+      "text": "A vivid, well-detailed choice description that highlights its potential impact on the storyline.",
+      "synopsis": "A brief but insightful summary of this choice's direction."
+    },
+    {
+      "text": "Another richly detailed choice description.",
+      "synopsis": "Another brief but insightful summary for this choice."
+    },
+    ...
+  ]
+}
+
+**Important**: Exclude any additional text, formatting, or markdown symbols outside of the JSON object. Only return the pure JSON object.`;
 		}
 
 		return prompt;
-	}
-
-	pretifyResponse(generatedText: string) {
-		let generatedResponseText = generatedText;
-
-		if (generatedResponseText.includes("```")) {
-			generatedResponseText = generatedResponseText
-				.replace(/```json|```/g, "")
-				.trim();
-		}
-
-		try {
-			return JSON.parse(generatedResponseText) as GeneratedResponse;
-		} catch (parseError) {
-			throw new Error(
-				`Failed to parse AI response: ${(parseError as Error).message}`,
-			);
-		}
 	}
 
 	async fetchResponse(prompt: string): Promise<ReadableStream> {
@@ -129,53 +136,6 @@ The description should be concise and deep, setting up key elements like the set
 			},
 		});
 	}
-
-	async fetchDummyResponse(): Promise<ReadableStream> {
-		return new ReadableStream({
-			start: (controller) => {
-				controller.enqueue("Hello");
-				setTimeout(() => {
-					controller.enqueue("World");
-					controller.close();
-				}, 3000);
-			},
-		});
-	}
-
-	// async generateRecursiveSteps(
-	// 	currentStepIndex: number,
-	// 	currentStoryline: GenerateStorylineStep,
-	// 	totalSteps: number,
-	// ): Promise<GenerateStorylineStep> {
-	// 	if (currentStepIndex >= totalSteps) {
-	// 		return currentStoryline;
-	// 	}
-
-	// 	const prompt = await this.buildPrompt(currentStoryline);
-
-	// 	try {
-	// 		const { description, choices } = await this.fetchResponse(prompt);
-	// 		console.log("fetched: ", description, choices);
-
-	// 		currentStoryline.steps.push({ description, choice: "" });
-
-	// 		for (const choice of choices) {
-	// 			const nextStoryline = { ...currentStoryline };
-	// 			nextStoryline.steps[currentStepIndex].choice = choice;
-
-	// 			await this.generateRecursiveSteps(
-	// 				currentStepIndex + 1,
-	// 				nextStoryline,
-	// 				totalSteps,
-	// 			);
-	// 		}
-
-	// 		return currentStoryline;
-	// 	} catch (e) {
-	// 		// console.error("Error calling LLaMA:", e);
-	// 		throw new Error("Failed to generate choices");
-	// 	}
-	// }
 }
 
 export const apiModelService = new ApiModelService();

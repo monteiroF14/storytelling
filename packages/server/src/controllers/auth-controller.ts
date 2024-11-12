@@ -1,7 +1,7 @@
 import { env } from "app/env";
 import { logger } from "app/logger";
 import type { Context, Next } from "hono";
-import { setCookie, deleteCookie } from "hono/cookie";
+import { deleteCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 import jwt from "jsonwebtoken";
 import { type AuthService, authService } from "services/auth-service";

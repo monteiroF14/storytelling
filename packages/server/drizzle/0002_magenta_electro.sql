@@ -1,0 +1,1 @@
+ALTER TABLE `storyline` DROP COLUMN `steps`;

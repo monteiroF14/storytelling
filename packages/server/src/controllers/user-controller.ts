@@ -1,11 +1,11 @@
+import type { JwtPayload } from "@storytelling/types";
+import { env } from "app/env";
 import { logger } from "app/logger";
 import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
-import { type UserService, userService } from "services/user-service";
 import jwt from "jsonwebtoken";
-import { env } from "app/env";
-import type { JwtPayload } from "@storytelling/types";
+import { type UserService, userService } from "services/user-service";
 
 class UserController {
 	constructor(private userService: UserService) {}

@@ -1,6 +1,6 @@
 import {
 	CreateStorylineSchema,
-	type GenerateStorylineStep,
+	type GenerateStorylineChapter,
 	StorylineSchema,
 	UpdateStatusSchema,
 	UpdateVisibilitySchema,
@@ -113,7 +113,7 @@ export class StorylineController {
 			return c.json({ storyline: updatedStoryline });
 		} catch (e) {
 			logger({
-				message: `${this.constructor.name} > ${this.updateSteps.name} -> Error updating steps: ${e}`,
+				message: `${this.constructor.name} > ${this.updateStatus.name} -> Error updating steps: ${e}`,
 				type: "ERROR",
 			});
 
@@ -127,19 +127,21 @@ export class StorylineController {
 		}
 	};
 
-	updateSteps = async (c: Context) => {
+	updateChapters = async (c: Context) => {
+		console.log("update chapters");
+
 		try {
 			const { id } = c.req.param();
 			const parsedId = Number.parseInt(id);
 
 			const body = await c.req.json();
 
-			// ! make this work with validation
+			// TODO: make this work with validation
 			// const validatedData = UpdateStepsSchema.parse(body);
 
-			const updatedStoryline = await this.storylineService.updateSteps({
+			const updatedStoryline = await this.storylineService.updateChapters({
 				id: parsedId,
-				steps: body.steps,
+				chapters: body.chapters,
 			});
 
 			if (!updatedStoryline) {
@@ -150,7 +152,7 @@ export class StorylineController {
 			return c.json({ storyline: updatedStoryline });
 		} catch (e) {
 			logger({
-				message: `${this.constructor.name} > ${this.updateSteps.name} -> Error updating steps: ${e}`,
+				message: `${this.constructor.name} > ${this.updateChapters.name} -> Error updating steps: ${e}`,
 				type: "ERROR",
 			});
 
@@ -249,9 +251,9 @@ export class StorylineController {
 			c.header("Cache-Control", "no-cache");
 			c.header("Connection", "keep-alive");
 
-			const currentStoryline: GenerateStorylineStep = {
+			const currentStoryline: GenerateStorylineChapter = {
 				title: parsedBody.title,
-				steps: parsedBody.steps,
+				chapters: parsedBody.chapters,
 			};
 
 			const prompt = this.apiModelService.buildPrompt(currentStoryline);
@@ -260,8 +262,6 @@ export class StorylineController {
 			const reader = responseStream.getReader();
 
 			let fullResponse = "";
-
-			// TRANSFORM THE DATA HERE, MAKE RETURN A JSON
 
 			while (true) {
 				const { done, value } = await reader.read();
@@ -283,36 +283,14 @@ export class StorylineController {
 
 			return c.json({ response: fullResponse });
 		} catch (error) {
-			// console.error("Error calling LLaMA:", error);
+			logger({
+				message: `Error calling LLaMA: ${error}`,
+				type: "ERROR",
+			});
 			return c.json({ error: "Failed to get response from LLaMA" }, 500);
 		}
 	};
 }
-
-// const response = new Response(
-// 	(async function* () {
-// 		yield "hello";
-// 		yield "world";
-// 	})(),
-// );
-
-// const response = new Response({
-// 	[Symbol.asyncIterator]: async function* () {
-// 		yield "hello";
-// 		yield "world";
-// 	},
-// });
-
-// await response.text();
-
-// const response = new Response({
-// 	[Symbol.asyncIterator]: async function* () {
-// 		const controller = yield "hello";
-// 		await controller.end();
-// 	},
-// });
-
-// await response.text();
 
 export const storylineController = new StorylineController(
 	storylineService,

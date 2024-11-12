@@ -1,16 +1,26 @@
 import { z } from "zod";
 
-export const StepSchema = z.object({
-	description: z.string(), // Text describing the plot at this step
-	choice: z.string(),
-});
-export type Step = z.infer<typeof StepSchema>;
-
-export const GeneratedStepSchema = z.object({
+export const StorylineChapterSchema = z.object({
 	description: z.string(),
-	choices: z.array(z.string()),
+	choice: z.object({
+		text: z.string(),
+		synopsis: z.string(),
+	}),
 });
-export type GeneratedStep = z.infer<typeof GeneratedStepSchema>;
+export type StorylineChapter = z.infer<typeof StorylineChapterSchema>;
+
+export const GeneratedStorylineChapter = z.object({
+	description: z.string(),
+	choices: z.array(
+		z.object({
+			text: z.string(),
+			synopsis: z.string(),
+		}),
+	),
+});
+export type GeneratedStorylineChapter = z.infer<
+	typeof GeneratedStorylineChapter
+>;
 
 export const CreateStorylineSchema = z.object({
 	title: z.string().min(1, { message: "Title is required" }),
@@ -28,18 +38,18 @@ export const StorylineSchema = z.object({
 	userId: z.number(),
 	status: z.enum(["ongoing", "completed"]),
 	visibility: z.enum(["public", "private"]),
-	steps: z.array(StepSchema).default([]),
+	chapters: z.array(StorylineChapterSchema).default([]),
 	created: z.number(),
 	updated: z.number(),
 });
 export type Storyline = z.infer<typeof StorylineSchema>;
 
-export type GenerateStorylineStep = Pick<Storyline, "title" | "steps">;
+export type GenerateStorylineChapter = Pick<Storyline, "title" | "chapters">;
 
 export const UpdateVisibilitySchema = StorylineSchema.pick({
 	visibility: true,
 });
-export const UpdateStepsSchema = StorylineSchema.pick({ steps: true });
+export const UpdateChaptersSchema = StorylineSchema.pick({ chapters: true });
 export const UpdateStatusSchema = StorylineSchema.pick({ status: true });
 
 // Represents a user playing the game
@@ -58,24 +68,3 @@ export const JwtPayloadSchema = z.object({
 	id: z.number(),
 });
 export type JwtPayload = z.infer<typeof JwtPayloadSchema>;
-
-export const WebSocketMessagePayloadSchema = z.object({
-	messageType: z.enum(["create", "fetch", "edit", "retrieve"]),
-	data: z.object({
-		userId: z.number().positive({ message: "Invalid user ID" }),
-		storyline: z.union([StorylineSchema, CreateStorylineSchema]).optional(),
-	}),
-});
-export type WebSocketMessagePayload = z.infer<
-	typeof WebSocketMessagePayloadSchema
->;
-
-export const WebSocketMessageResponseSchema = z.object({
-	type: z.enum(["error", "success"]),
-	storylines: z.array(StorylineSchema).optional(),
-	storyline: StorylineSchema.optional(),
-});
-
-export type WebSocketMessageResponse = z.infer<
-	typeof WebSocketMessageResponseSchema
->;

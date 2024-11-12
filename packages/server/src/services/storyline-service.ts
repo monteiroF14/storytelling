@@ -1,8 +1,8 @@
 import {
 	type Storyline,
 	StorylineSchema,
+	UpdateChaptersSchema,
 	UpdateStatusSchema,
-	UpdateStepsSchema,
 	UpdateVisibilitySchema,
 } from "@storytelling/types";
 import { ValidationError } from "app/error";
@@ -28,11 +28,11 @@ export class StorylineService {
 				.get();
 
 			const { status } = UpdateStatusSchema.parse(query.status);
-			const { steps } = UpdateStepsSchema.parse(query.steps);
+			const { chapters } = UpdateChaptersSchema.parse(query.chapters);
 
 			return {
 				...query,
-				steps,
+				chapters,
 				status,
 				visibility,
 			};
@@ -46,12 +46,12 @@ export class StorylineService {
 		}
 	}
 
-	async updateSteps({ id, steps }: Pick<Storyline, "id" | "steps">) {
+	async updateChapters({ id, chapters }: Pick<Storyline, "id" | "chapters">) {
 		try {
 			const query = await db
 				.update(storyline)
 				.set({
-					steps: JSON.stringify(steps),
+					chapters: JSON.stringify(chapters),
 					updated: Date.now(),
 				})
 				.where(eq(storyline.id, id))
@@ -60,11 +60,12 @@ export class StorylineService {
 
 			return {
 				...query,
-				steps: JSON.parse(query.steps),
+				chapters: JSON.parse(query.chapters),
 			};
 		} catch (e) {
 			logger({
-				message: e instanceof Error ? e.message : "error while updating steps",
+				message:
+					e instanceof Error ? e.message : "error while updating chapters",
 				type: "ERROR",
 			});
 			throw e;
@@ -86,12 +87,12 @@ export class StorylineService {
 				.returning()
 				.get();
 
-			const { steps } = UpdateStepsSchema.parse(query.steps);
+			const { chapters } = UpdateChaptersSchema.parse(query.chapters);
 			const { visibility } = UpdateVisibilitySchema.parse(query.visibility);
 
 			return {
 				...query,
-				steps,
+				chapters,
 				status,
 				visibility,
 			};
@@ -143,13 +144,13 @@ export class StorylineService {
 				.where(eq(storyline.id, storylineId))
 				.get();
 
-			if (!result || !result.steps || result.steps === null) {
+			if (!result || !result.chapters || result.chapters === null) {
 				return;
 			}
 
 			return {
 				...result,
-				steps: JSON.parse(result.steps) as Storyline["steps"],
+				chapters: JSON.parse(result.chapters) as Storyline["chapters"],
 			} as Storyline;
 		} catch (e) {
 			logger({
@@ -198,7 +199,7 @@ export class StorylineService {
 
 			return result.map((storyline) => ({
 				...storyline,
-				steps: JSON.parse(storyline.steps) as Storyline["steps"],
+				chapters: JSON.parse(storyline.chapters) as Storyline["chapters"],
 				visibility: storyline.visibility as "public" | "private",
 				status: storyline.status as "ongoing" | "completed",
 			}));

@@ -1,18 +1,18 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
+import { page } from "$app/stores";
+import { api } from "$lib/axios";
 import { currentStoryline, storylines } from "$lib/stores";
 import { formatTimeAgo } from "$lib/util";
-import { onMount } from "svelte";
+import type { Storyline } from "@storytelling/types";
+import { Spinner } from "flowbite-svelte";
 import {
+	ArrowSortLettersOutline,
 	CheckCircleOutline,
 	ExclamationCircleOutline,
-	ArrowSortLettersOutline,
 } from "flowbite-svelte-icons";
+import { onMount } from "svelte";
 import type { PageServerData } from "./$types";
-import { Spinner } from "flowbite-svelte";
-import { api } from "$lib/axios";
-import type { Storyline } from "@storytelling/types";
-import { page } from "$app/stores";
 
 export let data: PageServerData;
 
@@ -112,7 +112,7 @@ onMount(() => {
                   {/if}
                 </p>
                 <p>
-                  <span class="font-bold">{storyline.steps.length}</span> /
+                  <span class="font-bold">{storyline.chapters.length}</span> /
                   <span class="font-bold">{storyline.totalSteps || "∞"}</span>
                 </p>
               </div>
