@@ -12,7 +12,6 @@ export const createStorylineRouter = (controller: StorylineController) => {
 	storylineRouter.patch("/:id/chapters", controller.updateChapters);
 	storylineRouter.patch("/:id/status", controller.updateStatus);
 
-	// TODO: prefetch this route on storyline load
 	storylineRouter.post("/generate", controller.generate);
 
 	return storylineRouter;

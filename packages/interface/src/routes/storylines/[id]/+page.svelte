@@ -51,11 +51,10 @@ $: if ($currentStoryline?.chapters?.length === $currentStoryline.totalSteps) {
 
 async function fetchNextStoryStep() {
 	try {
-		const response = await api.post("/storylines/generate", {
+		const { data } = await api.post("/storylines/generate", {
 			storyline: $currentStoryline,
 		});
-		const parsed = JSON.parse(response.data.response);
-		aiResponse.set(parsed);
+		aiResponse.set(data);
 	} catch (error) {
 		showAlert = true;
 
@@ -190,13 +189,18 @@ async function handleUserChoice(choice: StorylineChapter["choice"]) {
 			{:else}
 				<p class="text-red-500 font-semibold text-xl">Failed to load response!</p>
 
+				<button
+					class="font-semibold text-lg px-4 py-2 bg-story-500 text-black rounded-lg w-fit mx-auto" on:click={fetchNextStoryStep}
+					>Retry</button
+				>
+
 				{#if showAlert}
 					<div in:slide={{ delay: 250, duration: 300, easing: quintOut, axis: "x" }} out:fade|local>
 						{#if validationError}
 							<Alert color="red" class="absolute right-12 bottom-12 text-lg" dismissable>
 								<InfoCircleSolid slot="icon" class="w-8 h-8" />
 								<span class="font-semibold">Error!</span>
-								Storyline title cannot be empty.
+								{validationError}
 							</Alert>
 						{/if}
 					</div>
@@ -204,16 +208,21 @@ async function handleUserChoice(choice: StorylineChapter["choice"]) {
 			{/if}
 
 			<div class="pb-8">
-				{#each $currentStoryline.chapters.reverse() as storyStep}
+				{#each $currentStoryline.chapters.reverse() as storyStep, idx}
+					<div class="flex gap-4 my-4 w-full items-center">
+						<h4 class="text-lg text-zinc-500 font-semibold"
+							>Chapter {$currentStoryline.chapters.length - idx}</h4
+						>
+						<hr class="border-1 border-zinc-300 grow" />
+					</div>
 					<p class="py-2">{storyStep.description}</p>
 					<p class="py-2">
 						{storyStep.choice.text}
 					</p>
-					<hr class="my-4 border-1 border-zinc-200 last-of-type:hidden" />
 				{/each}
 			</div>
 		{:else if $currentStoryline.chapters?.length > 0}
-      <!-- MEANING STORYLINE IS COMPLETED -->
+			<!-- MEANING STORYLINE IS COMPLETED -->
 
 			<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
 			<div class="pb-8">

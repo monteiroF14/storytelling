@@ -97,44 +97,32 @@ Return the result strictly in this JSON structure:
     ...
   ]
 }
-
-**Important**: Exclude any additional text, formatting, or markdown symbols outside of the JSON object. Only return the pure JSON object.`;
+`;
 		}
 
 		return prompt;
 	}
 
-	async fetchResponse(prompt: string): Promise<ReadableStream> {
-		const response = await fetch(`${env.LLAMA_API_URL}/api/generate`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				model: this.OLLAMA_MODEL,
-				prompt,
-				format: "json",
-			}),
+	async fetchResponse<T>(prompt: string, retries = 3) {
+		// try {
+		const response = await axios.post<T>(`${env.LLAMA_API_URL}/api/generate`, {
+			model: this.OLLAMA_MODEL,
+			prompt,
+			format: "json",
+			stream: false,
 		});
+		return response;
+		// } catch (e) {
+		// 	if (retries > 0) {
+		// 		console.log("got error and gonna retry", e);
+		// 		await new Promise((res) => setTimeout(res, 1000));
+		// 		return this.fetchResponse(prompt, retries - 1);
+		// 	}
 
-		return new ReadableStream({
-			async start(controller) {
-				if (!response.body) {
-					throw new Error("ReadableStream not supported!");
-				}
-
-				const reader = response.body.getReader();
-				const decoder = new TextDecoder("utf-8");
-
-				while (true) {
-					const { done, value } = await reader.read();
-					if (done) break;
-					controller.enqueue(decoder.decode(value, { stream: true }));
-				}
-
-				controller.close();
-			},
-		});
+		// 	throw new Error(
+		// 		`Failed to fetch response after ${3 - retries} retries: ${e.message}`,
+		// 	);
+		// }
 	}
 }
 

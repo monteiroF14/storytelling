@@ -2,6 +2,7 @@ import {
 	CreateStorylineSchema,
 	type GenerateStorylineChapter,
 	StorylineSchema,
+	UpdateChaptersSchema,
 	UpdateStatusSchema,
 	UpdateVisibilitySchema,
 } from "@storytelling/types";
@@ -128,20 +129,17 @@ export class StorylineController {
 	};
 
 	updateChapters = async (c: Context) => {
-		console.log("update chapters");
-
 		try {
 			const { id } = c.req.param();
 			const parsedId = Number.parseInt(id);
 
 			const body = await c.req.json();
 
-			// TODO: make this work with validation
-			// const validatedData = UpdateStepsSchema.parse(body);
+			const { chapters } = UpdateChaptersSchema.parse(body);
 
 			const updatedStoryline = await this.storylineService.updateChapters({
 				id: parsedId,
-				chapters: body.chapters,
+				chapters,
 			});
 
 			if (!updatedStoryline) {
@@ -247,47 +245,34 @@ export class StorylineController {
 				});
 			}
 
-			c.header("Content-Type", "text/event-stream");
-			c.header("Cache-Control", "no-cache");
-			c.header("Connection", "keep-alive");
-
 			const currentStoryline: GenerateStorylineChapter = {
 				title: parsedBody.title,
 				chapters: parsedBody.chapters,
 			};
 
 			const prompt = this.apiModelService.buildPrompt(currentStoryline);
-			const responseStream = await this.apiModelService.fetchResponse(prompt);
+			const { data, status } = await this.apiModelService.fetchResponse<{
+				model: string;
+				created_at: Date;
+				response: string;
+				done: boolean;
+				done_reason: string;
+				context: number[];
+			}>(prompt);
 
-			const reader = responseStream.getReader();
-
-			let fullResponse = "";
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				const parsedResponse: {
-					model: string;
-					created_at: Date;
-					response: string;
-					done: boolean;
-				} = JSON.parse(value);
-
-				fullResponse += parsedResponse.response;
-
-				if (parsedResponse.done === true) {
-					break;
-				}
+			if (status !== 200) {
+				throw new Error("bad request, res not 200");
 			}
 
-			return c.json({ response: fullResponse });
+			const parsedResponse = JSON.parse(data.response);
+
+			return c.json(parsedResponse);
 		} catch (error) {
 			logger({
 				message: `Error calling LLaMA: ${error}`,
 				type: "ERROR",
 			});
-			return c.json({ error: "Failed to get response from LLaMA" }, 500);
+			return c.json({ error: "Failed to get response from LLaMA" }, 503);
 		}
 	};
 }
