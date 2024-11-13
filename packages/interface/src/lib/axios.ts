@@ -43,7 +43,9 @@ export const serverApi = (request: Request) => {
 	const cookie = request.headers.get("cookie");
 
 	if (!cookie) {
-		return;
+		return axios.create({
+			baseURL: env.VITE_API_URL,
+		});
 	}
 
 	return axios.create({

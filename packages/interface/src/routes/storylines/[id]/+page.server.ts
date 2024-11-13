@@ -6,7 +6,6 @@ export const load: PageServerLoad = async ({ params, request }) => {
 	if (!params.id) return {};
 
 	const api = serverApi(request);
-	if (!api) throw "Unauthenticated";
 
 	const { data, status } = await api.get<{ storyline: Storyline }>(
 		`/storylines/${params.id}`,
