@@ -17,7 +17,29 @@ export default {
 			fontFamily: {
 				inter: ["Inter", "sans-serif"],
 			},
+			animation: {
+				"loading-animation": "loading-animation 0.8s infinite ease-in-out",
+			},
+			keyframes: {
+				"loading-animation": {
+					"0%, 80%, 100%": { opacity: "0.75", boxShadow: "0 0 #FFEB7D", height: "32px" },
+					"40%": { opacity: "1", boxShadow: "0 -8px #FFEB7D", height: "40px" },
+				},
+			},
+			spacing: {
+				"loading-offset": "19.992px",
+				"loader-width": "13.6px",
+				"loader-height": "32px",
+			},
 		},
 	},
-	plugins: [],
+	plugins: [
+		({ addUtilities }) => {
+			addUtilities({
+				".delay-1": { animationDelay: "0s" },
+				".delay-2": { animationDelay: "0.16s" },
+				".delay-3": { animationDelay: "0.32s" },
+			});
+		},
+	],
 };

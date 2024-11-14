@@ -1,115 +1,107 @@
 <script lang="ts">
-import { goto } from "$app/navigation";
-import { page } from "$app/stores";
-import { api } from "$lib/axios";
-import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
-import {
-	aiResponse,
-	aiResponseLoading,
-	currentStoryline,
-	storylines,
-} from "$lib/stores";
-import { formatTimeAgo } from "$lib/util";
-import type { Storyline, StorylineChapter } from "@storytelling/types";
-import { Alert, Drawer } from "flowbite-svelte";
-import {
-	ArrowsRepeatOutline,
-	CheckCircleOutline,
-	ExclamationCircleOutline,
-	InfoCircleSolid,
-} from "flowbite-svelte-icons";
-import { quintOut, sineIn } from "svelte/easing";
-import { fade, slide } from "svelte/transition";
+	import { goto } from "$app/navigation";
+	import { page } from "$app/stores";
+	import { api } from "$lib/axios";
+	import { TOTAL_STORYLINE_STEPS } from "$lib/constants";
+	import { aiResponse, aiResponseLoading, currentStoryline, storylines } from "$lib/stores";
+	import { formatTimeAgo } from "$lib/util";
+	import type { Storyline, StorylineChapter } from "@storytelling/types";
+	import { Alert, Drawer, TextPlaceholder } from "flowbite-svelte";
+	import {
+		ArrowsRepeatOutline,
+		CheckCircleOutline,
+		ExclamationCircleOutline,
+		InfoCircleSolid,
+	} from "flowbite-svelte-icons";
+	import { quintOut, sineIn } from "svelte/easing";
+	import { fade, slide } from "svelte/transition";
 
-let validationError: string;
-let showAlert = false;
+	let validationError: string;
+	let showAlert = false;
 
-let hidden = true;
+	let hidden = true;
 
-const transitionParams = {
-	x: -320,
-	duration: 200,
-	easing: sineIn,
-};
+	const transitionParams = {
+		x: -320,
+		duration: 200,
+		easing: sineIn,
+	};
 
-let defaultModal = false;
+	let defaultModal = false;
 
-$: if (
-	$currentStoryline &&
-	$currentStoryline.status === "ongoing" &&
-	$currentStoryline.chapters.length <
-		($currentStoryline.totalSteps || TOTAL_STORYLINE_STEPS)
-) {
-	aiResponseLoading.set(true);
-	fetchNextStoryStep().finally(() => {
-		aiResponseLoading.set(false);
-	});
-}
-
-$: if ($currentStoryline?.chapters?.length === $currentStoryline.totalSteps) {
-	defaultModal = true;
-}
-
-async function fetchNextStoryStep() {
-	try {
-		const { data } = await api.post("/storylines/generate", {
-			storyline: $currentStoryline,
+	$: if (
+		$currentStoryline &&
+		$currentStoryline.status === "ongoing" &&
+		$currentStoryline.chapters.length < ($currentStoryline.totalSteps || TOTAL_STORYLINE_STEPS)
+	) {
+		aiResponseLoading.set(true);
+		fetchNextStoryStep().finally(() => {
+			aiResponseLoading.set(false);
 		});
-		aiResponse.set(data);
-	} catch (error) {
-		showAlert = true;
-
-		if (error instanceof Error) {
-			validationError = error.message;
-		}
-
-		console.error("Error fetching the next story step:", error);
-
-		setTimeout(() => {
-			showAlert = false;
-		}, 3000);
 	}
-}
 
-async function handleUserChoice(choice: StorylineChapter["choice"]) {
-	const updatedStoryline = {
-		...$currentStoryline,
-		chapters: [
-			...$currentStoryline.chapters,
+	$: if ($currentStoryline?.chapters?.length === $currentStoryline.totalSteps) {
+		defaultModal = true;
+	}
+
+	async function fetchNextStoryStep() {
+		try {
+			const { data } = await api.post("/storylines/generate", {
+				storyline: $currentStoryline,
+			});
+			aiResponse.set(data);
+		} catch (error) {
+			showAlert = true;
+
+			if (error instanceof Error) {
+				validationError = error.message;
+			}
+
+			console.error("Error fetching the next story step:", error);
+
+			setTimeout(() => {
+				showAlert = false;
+			}, 3000);
+		}
+	}
+
+	async function handleUserChoice(choice: StorylineChapter["choice"]) {
+		const updatedStoryline = {
+			...$currentStoryline,
+			chapters: [
+				...$currentStoryline.chapters,
+				{
+					choice,
+					description: $aiResponse?.description || "",
+				},
+			],
+		} satisfies Storyline;
+
+		const { data, status } = await api.patch<{ storyline: Storyline }>(
+			`/storylines/${updatedStoryline.id}/chapters`,
 			{
-				choice,
-				description: $aiResponse?.description || "",
-			},
-		],
-	} satisfies Storyline;
+				chapters: updatedStoryline.chapters,
+			}
+		);
 
-	const { data, status } = await api.patch<{ storyline: Storyline }>(
-		`/storylines/${updatedStoryline.id}/chapters`,
-		{
-			chapters: updatedStoryline.chapters,
-		},
-	);
+		if (status !== 200) throw new Error("Error updating storyline");
 
-	if (status !== 200) throw new Error("Error updating storyline");
+		currentStoryline.set(data.storyline);
+		storylines.update((list) =>
+			list.map((story) => (story.id === updatedStoryline.id ? updatedStoryline : story))
+		);
+	}
 
-	currentStoryline.set(data.storyline);
-	storylines.update((list) =>
-		list.map((story) =>
-			story.id === updatedStoryline.id ? updatedStoryline : story,
-		),
-	);
-}
-
-const statusClasses = {
-	ongoing: "bg-story-500 text-black font-semibold px-2 py-1 rounded-lg",
-	completed: "bg-green-600 text-black font-semibold px-2 py-1 rounded-lg",
-};
+	const statusClasses = {
+		ongoing: "bg-story-300 text-zinc-900 font-semibold px-2 py-1 rounded-lg",
+		completed: "bg-green-600 text-black font-semibold px-2 py-1 rounded-lg",
+	};
 </script>
 
 {#if $currentStoryline}
 	<header class="w-full space-y-2">
 		<div class="flex items-center justify-between">
-			<h2 class="text-4xl font-bold text-black">{$currentStoryline.title}</h2>
+			<h2 class="text-3xl font-bold text-black">{$currentStoryline.title}</h2>
 			{#if $page.data.user}
 				<button on:click={() => (hidden = false)}>
 					<ArrowsRepeatOutline class="h-[2.5em] w-[2.5em]" />
@@ -119,12 +111,17 @@ const statusClasses = {
 		{#if $currentStoryline.status === "ongoing"}
 			<div class="flex gap-4">
 				<span class={statusClasses[$currentStoryline.status]}>{$currentStoryline.status}</span>
-				<svg height="0.5rem" width="0.5rem" xmlns="http://www.w3.org/2000/svg" class="inline-block my-auto">
-					<circle r="0.25rem" cx="0.25rem" cy="0.25rem" fill="grey" />
+				<svg
+					height="0.5rem"
+					width="0.5rem"
+					xmlns="http://www.w3.org/2000/svg"
+					class="inline-block my-auto"
+				>
+					<circle r="0.25rem" cx="0.25rem" cy="0.25rem" fill="#6F7378" />
 				</svg>
 				<p class="pt-1 text-xl text-zinc-600 font-semibold">
 					{$currentStoryline.chapters.length} out of
-					<span>{$currentStoryline.totalSteps ?? TOTAL_STORYLINE_STEPS} steps</span>
+					<span>{$currentStoryline.totalSteps ?? TOTAL_STORYLINE_STEPS} chapters</span>
 				</p>
 			</div>
 		{/if}
@@ -187,7 +184,19 @@ const statusClasses = {
 		{#if $currentStoryline.status === "ongoing"}
 			{#if $page.data.user}
 				{#if $aiResponseLoading}
-					<p class="font-semibold">Loading..</p>
+					<div class="relative w-full h-full">
+						<div class="absolute inset-0 mx-auto flex items-center justify-center">
+							<div
+								class="bg-story-400 w-loader-width h-loader-height animate-loading-animation mx-loading-offset delay-1"
+							></div>
+							<div
+								class="bg-story-400 w-loader-width h-loader-height animate-loading-animation delay-2"
+							></div>
+							<div
+								class="bg-story-400 w-loader-width h-loader-height animate-loading-animation mx-loading-offset delay-3"
+							></div>
+						</div>
+					</div>
 				{:else if $aiResponse}
 					<div class="flex flex-col gap-4 mb-8">
 						<p class="py-2 text-zinc-800">{$aiResponse.description}</p>
