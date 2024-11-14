@@ -31,68 +31,55 @@ export class ApiModelService {
 		const STORYLINE_CHOICES = 3;
 
 		if (chapters.length === 0) {
-			// Initial prompt for the first chapter
 			prompt = `
-Create an immersive storyline with the central theme of '${title}', designed to unfold over ${TOTAL_STORYLINE_CHAPTERS} interconnected chapters.
-Each chapter should be meticulously crafted, developing the setting, characters, and core conflict progressively, leading to a climax and a fulfilling resolution in the final chapter.
+Craft an immersive storyline centered around '${title}', unfolding over ${TOTAL_STORYLINE_CHAPTERS} intricately connected chapters. Each chapter should progressively deepen the story’s atmosphere, character arcs, and escalating conflict, guiding toward an impactful resolution in the final chapter.
 
-Begin by generating the **first chapter** as a JSON object in the following format:
+Begin with the **first chapter**, providing an elaborate introduction in JSON format:
 
 {
-  "description": "An elaborate introduction to the storyline, capturing the ambiance, characters, and underlying conflict.",
+  "description": "A vivid portrayal of the initial setting and mood, revealing subtle but significant character traits and a looming conflict that shapes the plot.",
   "choices": [
     {
-      "text": "A vivid description of the first choice, explaining its potential impact and where it might lead the storyline.",
-      "synopsis": "A succinct but insightful summary of this choice’s direction."
-    },
-    {
-      "text": "A richly detailed description of the second choice.",
-      "synopsis": "A concise yet informative summary of this choice’s implications."
+      "text": "A powerful choice description that hints at the choice's profound impact, affecting both the storyline and the protagonist’s mindset.",
+      "synopsis": "An insightful summary that subtly foreshadows where this choice could lead."
     },
     ...
   ]
 }
 
-Each chapter should convey depth, complexity, and suspense, drawing the player into the evolving plot. In this first chapter, focus on establishing the core storyline elements, while making each choice distinct and meaningful. For each choice, include:
-- A **"text" field** with a detailed explanation of the choice's impact on the storyline, highlighting its potential consequences.
-- A **"synopsis" field** summarizing the direction in which the choice might lead.
+This first chapter should convey complexity and suspense, introducing readers to core themes and conflicts. Each choice should:
+- Have a **"text" field** depicting the choice’s significance and its effect on both plot and character.
+- Have a **"synopsis" field** summarizing the narrative direction of each choice.
 
-**Do not include any text outside of the JSON object. Only return the structured JSON as specified.**
+**Return only JSON in the specified structure.**
 `;
 		} else {
-			// Continuation prompt for an existing storyline
 			const lastChapter = chapters[chapters.length - 1];
 			const remainingChapters = TOTAL_STORYLINE_CHAPTERS - chapters.length;
 			const storylinePath = chapters.map((step) => step.description).join(". ");
 
 			prompt = `
-Continue the development of the storyline titled "${title}", seamlessly connecting the next chapter to the established narrative:
+Continue building the storyline "${title}", connecting the next chapter to the established narrative:
 "${storylinePath}." The last choice made was: "${lastChapter.choice.text}".
 
-For this upcoming chapter, delve into the consequences of recent choices and explore how they shape the unfolding events, building on previous conflicts, relationships, and the storyline's overall trajectory.
+For this chapter, create an intricate scene with:
+- A **description** capturing emotional tension, character nuance, and escalating conflicts that drive the storyline forward.
+- ${STORYLINE_CHOICES} choice options:
+  - **"text" field** with a vivid portrayal of the choice and its potential consequences.
+  - **"synopsis" field** with a succinct preview hinting at the possible path forward.
 
-Generate the **next chapter** in the format below, following these detailed instructions:
-- Provide an **intricate description** of the scene or critical event occurring at this stage, with complex layers of emotion, action, or suspense as appropriate.
-- Design ${STORYLINE_CHOICES} choice options, each offering a distinct path forward with:
-  - A **"text" field** describing the choice in detail, conveying the gravity and potential consequences of selecting it.
-  - A **"synopsis" field** with a concise, insightful preview of where this choice might lead, guiding the player’s expectations.
+Consider:
+- If there are ${remainingChapters} chapters left, weave in subtle foreshadowing and complex character dilemmas to heighten the narrative.
+- For the **final chapter**, resolve themes and character arcs in a way that reflects the storyline’s overall journey, giving each choice meaningful closure.
 
-Take into account:
-- If there are ${remainingChapters} chapters remaining, enhance the storyline with escalating tension, subtle foreshadowing, or complex narrative twists as the story builds toward its climax.
-- If this is the **final chapter**, resolve the storyline in a powerful, satisfying way. The final choices should present meaningful outcomes that bring closure to the storyline’s central themes, character arcs, or conflicts.
-
-Return the result strictly in this JSON structure:
+Return strictly in JSON format:
 
 {
-  "description": "A detailed, engaging description of the current situation or event in the storyline.",
+  "description": "A detailed, evocative scene description.",
   "choices": [
     {
-      "text": "A vivid, well-detailed choice description that highlights its potential impact on the storyline.",
-      "synopsis": "A brief but insightful summary of this choice's direction."
-    },
-    {
-      "text": "Another richly detailed choice description.",
-      "synopsis": "Another brief but insightful summary for this choice."
+      "text": "A vivid choice description with emotional and narrative weight.",
+      "synopsis": "A concise direction preview."
     },
     ...
   ]
