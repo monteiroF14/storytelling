@@ -2,11 +2,6 @@ import type { GenerateStorylineChapter } from "@storytelling/types";
 import axios from "axios";
 import { env } from "bun";
 
-type GeneratedResponse = {
-	description: string;
-	choices: string[];
-};
-
 export class ApiModelService {
 	isModelAvailable = false;
 	OLLAMA_MODEL = "llama3.2";

@@ -9,7 +9,7 @@
 		"url": "https://github.com/monteiroF14/storytelling"
 	},
 	"scripts": {
-		"dev": "bun run --workspace @storytelling/server dev & bun run --workspace @storytelling/interface dev",
+		"dev": "bun run --cwd packages/server dev & bun run --cwd packages/interface dev",
 		"dev:ui": "bun run --cwd packages/interface dev",
 		"dev:server": "bun run --cwd packages/server dev",
 		"db:migrate": "bun run --cwd packages/server db:migrate",

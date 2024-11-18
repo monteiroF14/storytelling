@@ -3,6 +3,9 @@ services:
     image: ollama/ollama:latest
     labels:
       - "autoheal=true"
+    environment:
+      - OLLAMA_NUM_THREADS=8
+      - OLLAMA_CONTEXT_SIZE=4096
     healthcheck:
       test: "ollama --version && ollama ps || exit 1"
       timeout: 5s
@@ -21,7 +24,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   api:
-    build: .
+    build:
+      context: ./
+      dockerfile: ./packages/server/Dockerfile
     ports:
       - "3000:3000"
     volumes:
@@ -32,11 +37,35 @@ services:
         condition: service_healthy
         restart: true
     healthcheck:
-      test: "curl -f http://localhost:3000/"
+      test: "curl -f http://api:3000/"
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+
     env_file:
       - ./packages/server/.env
+    restart: always
+
+  interface:
+    build:
+      context: ./
+      dockerfile: ./packages/interface/Dockerfile
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./packages/interface:/app/packages/interface
+      - ./packages/types:/app/packages/types
+    depends_on:
+      api:
+        condition: service_healthy
+        restart: true
+    healthcheck:
+      test: "curl -f http://interface:5555/"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - VITE_API_URL=http://api:3000
     restart: always

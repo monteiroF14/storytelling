@@ -139,7 +139,7 @@ class AuthController {
 			maxAge: 7 * 86400,
 		});
 
-		return c.redirect("http://localhost:5173/", 301);
+		return c.redirect("http://localhost:5555/", 301);
 	};
 
 	signOut = (c: Context) => {
