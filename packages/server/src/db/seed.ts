@@ -14,7 +14,15 @@ async function seedDatabase() {
 		return {
 			userId: 1,
 			title: faker.lorem.sentence(),
-			steps: JSON.stringify([{ step: faker.lorem.paragraph() }]),
+			chapters: JSON.stringify([
+				{
+					choice: {
+						synopsis: faker.lorem.sentence(),
+						text: faker.lorem.text(),
+					},
+					description: faker.lorem.paragraphs(),
+				},
+			]),
 			totalSteps: 8,
 			status: faker.helpers.arrayElement(["ongoing", "completed"]),
 			visibility: faker.helpers.arrayElement(["public", "private"]),

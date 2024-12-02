@@ -86,25 +86,28 @@ Return strictly in JSON format:
 	}
 
 	async fetchResponse<T>(prompt: string, retries = 3) {
-		// try {
-		const response = await axios.post<T>(`${env.LLAMA_API_URL}/api/generate`, {
-			model: this.OLLAMA_MODEL,
-			prompt,
-			format: "json",
-			stream: false,
-		});
-		return response;
-		// } catch (e) {
-		// 	if (retries > 0) {
-		// 		console.log("got error and gonna retry", e);
-		// 		await new Promise((res) => setTimeout(res, 1000));
-		// 		return this.fetchResponse(prompt, retries - 1);
-		// 	}
+		try {
+			const response = await axios.post<T>(
+				`${env.LLAMA_API_URL}/api/generate`,
+				{
+					model: this.OLLAMA_MODEL,
+					prompt,
+					format: "json",
+					stream: false,
+				},
+			);
+			return response;
+		} catch (e) {
+			if (retries > 0) {
+				console.log("got error and gonna retry", e);
+				await new Promise((res) => setTimeout(res, 1000));
+				return this.fetchResponse(prompt, retries - 1);
+			}
 
-		// 	throw new Error(
-		// 		`Failed to fetch response after ${3 - retries} retries: ${e.message}`,
-		// 	);
-		// }
+			throw new Error(
+				`Failed to fetch response after ${3 - retries} retries: ${e.message}`,
+			);
+		}
 	}
 }
 

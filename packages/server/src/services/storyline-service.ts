@@ -1,23 +1,32 @@
-import {
-	type Storyline,
-	StorylineSchema,
-	UpdateChaptersSchema,
-	UpdateStatusSchema,
-	UpdateVisibilitySchema,
-} from "@storytelling/types";
+import { type Storyline, StorylineSchema } from "@storytelling/types";
 import { ValidationError } from "app/error";
 import { logger } from "app/logger";
 import { db } from "db";
 import { storyline } from "db/schema";
 import { asc, desc, eq } from "drizzle-orm";
+import assert from "node:assert";
+
+// ? should I really assert here?
 
 export class StorylineService {
+	constructor(private database: typeof db) {}
+
 	async updateVisibility({
 		id,
 		visibility,
-	}: Pick<Storyline, "id" | "visibility">) {
+	}: Pick<Storyline, "id" | "visibility">): Promise<Storyline> {
+		// fix the db schema, make sure it sets to the default value
+		assert(visibility, "Visibility must not be undefined");
+
 		try {
-			const query = await db
+			const existingStoryline = await this.database
+				.select()
+				.from(storyline)
+				.where(eq(storyline.id, id))
+				.get();
+			assert(existingStoryline, `Storyline with id ${id} must exist.`);
+
+			const query = await this.database
 				.update(storyline)
 				.set({
 					visibility,
@@ -27,14 +36,10 @@ export class StorylineService {
 				.returning()
 				.get();
 
-			const { status } = UpdateStatusSchema.parse(query.status);
-			const { chapters } = UpdateChaptersSchema.parse(query.chapters);
-
+			// @ts-expect-error
 			return {
 				...query,
-				chapters,
-				status,
-				visibility,
+				chapters: JSON.parse(query.chapters),
 			};
 		} catch (e) {
 			logger({
@@ -47,8 +52,11 @@ export class StorylineService {
 	}
 
 	async updateChapters({ id, chapters }: Pick<Storyline, "id" | "chapters">) {
+		// fix the db schema, make sure it sets to the default value
+		assert(chapters, "chapters must not be undefined");
+
 		try {
-			const query = await db
+			const query = await this.database
 				.update(storyline)
 				.set({
 					chapters: JSON.stringify(chapters),
@@ -76,8 +84,11 @@ export class StorylineService {
 		id,
 		status,
 	}: Pick<Storyline, "id" | "status">): Promise<Storyline> {
+		// fix the db schema, make sure it sets to the default value
+		assert(status, "status must not be undefined");
+
 		try {
-			const query = await db
+			const query = await this.database
 				.update(storyline)
 				.set({
 					status,
@@ -87,14 +98,10 @@ export class StorylineService {
 				.returning()
 				.get();
 
-			const { chapters } = UpdateChaptersSchema.parse(query.chapters);
-			const { visibility } = UpdateVisibilitySchema.parse(query.visibility);
-
+			// @ts-expect-error
 			return {
 				...query,
-				chapters,
-				status,
-				visibility,
+				chapters: JSON.parse(query.chapters),
 			};
 		} catch (e) {
 			logger({
@@ -110,8 +117,11 @@ export class StorylineService {
 		totalSteps = 8,
 		userId,
 	}: Pick<Storyline, "title" | "totalSteps" | "userId">) {
+		assert(totalSteps && totalSteps > 0, "totalSteps must be a positive value");
+		assert(totalSteps <= 20, "totalSteps must be 20 or less");
+
 		try {
-			const result = await db
+			const result = await this.database
 				.insert(storyline)
 				.values({
 					title,
@@ -127,18 +137,18 @@ export class StorylineService {
 
 			return result;
 		} catch (e) {
-			console.error(`Failed to create storyline: ${e}`);
 			logger({
 				message:
 					e instanceof Error ? e.message : "error while creating storyline",
 				type: "ERROR",
 			});
+			throw e;
 		}
 	}
 
 	async read(storylineId: number) {
 		try {
-			const result = await db
+			const result = await this.database
 				.select()
 				.from(storyline)
 				.where(eq(storyline.id, storylineId))
@@ -188,7 +198,7 @@ export class StorylineService {
 			const orderByQuery =
 				order === "ASC" ? asc(storyline[orderBy]) : desc(storyline[orderBy]);
 
-			const result = await db
+			const result = await this.database
 				.select()
 				.from(storyline)
 				.where(userId ? eq(storyline.userId, userId) : undefined)
@@ -211,8 +221,10 @@ export class StorylineService {
 						: "error while fetching user storylines",
 				type: "ERROR",
 			});
+			console.log("error: ", e);
+			throw e;
 		}
 	}
 }
 
-export const storylineService = new StorylineService();
+export const storylineService = new StorylineService(db);

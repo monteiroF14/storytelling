@@ -18,7 +18,7 @@ export const storyline = sqliteTable("storyline", {
 	chapters: text("chapters").notNull().default("[]"),
 	totalSteps: integer("total_steps"), // number of steps a storyline has
 	status: text("status").default("ongoing").notNull(),
-	visibility: text("visibility").default("public").notNull(),
+	visibility: text("visibility").notNull().default("public"),
 	created: integer("created").notNull().default(sql`unixepoch('now')`),
 	updated: integer("updated").notNull().default(sql`unixepoch('now')`),
 });

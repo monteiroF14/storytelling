@@ -5,33 +5,11 @@ import { user } from "db/schema";
 import { eq } from "drizzle-orm";
 
 export class UserService {
-	async getUserRefreshToken({ userId }: { userId: number }) {
-		try {
-			const result = await db
-				.select()
-				.from(user)
-				.where(eq(user.id, userId))
-				.get();
-
-			if (!result || !result.refreshToken || result.refreshToken === null) {
-				return;
-			}
-
-			return result.refreshToken;
-		} catch (e) {
-			logger({
-				message:
-					e instanceof Error
-						? e.message
-						: "error while reading user refresh token",
-				type: "ERROR",
-			});
-		}
-	}
+	constructor(private database: typeof db) {}
 
 	async read(userId: number): Promise<User | undefined> {
 		try {
-			const result = await db
+			const result = await this.database
 				.select()
 				.from(user)
 				.where(eq(user.id, userId))
@@ -53,7 +31,7 @@ export class UserService {
 
 	async exists(email: string): Promise<User | undefined> {
 		try {
-			const result = await db
+			const result = await this.database
 				.select()
 				.from(user)
 				.where(eq(user.email, email))
@@ -78,7 +56,7 @@ export class UserService {
 		picture,
 	}: Pick<User, "username" | "email" | "picture">): Promise<User> {
 		try {
-			const result = await db
+			const result = await this.database
 				.insert(user)
 				.values({ username, email, picture })
 				.returning()
@@ -92,40 +70,6 @@ export class UserService {
 			throw e;
 		}
 	}
-
-	async setRefreshToken({
-		userId,
-		refreshToken,
-	}: {
-		userId: number;
-		refreshToken: string;
-	}): Promise<User> {
-		try {
-			const result = await db
-				.update(user)
-				.set({
-					refreshToken,
-				})
-				.where(eq(user.id, userId))
-				.returning()
-				.get();
-
-			if (!result) {
-				throw new Error(`User with id ${userId} doesn't exist`);
-			}
-
-			return result;
-		} catch (e) {
-			logger({
-				message:
-					e instanceof Error
-						? e.message
-						: "error while updating user refresh token",
-				type: "ERROR",
-			});
-			throw e;
-		}
-	}
 }
 
-export const userService = new UserService();
+export const userService = new UserService(db);
