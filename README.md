@@ -37,45 +37,35 @@ determining the ending based on the decisions made.
 
 ## Technical Stack
 
-- **Bun**: Backend for serving API and WebSocket connections.
+- **Bun**: Backend for serving API.
 - **SQLite3**: Database for storing user progress and story details.
-- **Hono**: Lightweight framework to handle routes and WebSocket connections.
-
-- Explore vite plugins
+- **Hono**: Lightweight framework to handle routes.
 
 ## Ideas for Expansion
 
-- Apply Clean Architecture and other architectures
 - Add unit testing
+- CI/CD with testing and linting -> even if doesnt pass the tests I know something broke
+- Apply Clean Architecture and other architectures
 
 - Enhance AI algorithms to predict coherent storylines based on user inputs and
   ensure that decisions logically impact the story ending.
 - Track user preferences and decision trees to offer tailored story suggestions.
-- Create an option for users to rate or share their story experience for
-  community insights.
 
-- Add translation between english and pt
+- Make the AI return faster
 
-- Make so the AI works, and somehow make it work without the user need of the
-  window.ai extension
-- Deploy the monorepo
-- CI/CD with testing included
+- think about CSR pattern (controller, service, repository)
+- abstract factory??
 
 - Add search bar for storylines
-- Add a sort for storylines
 
-- Add a central error handling between the client and server
-- Remove the login redirect
-
-- Since every storyline is unique and can be accessed, add a visibility prop of
-  "public" or "private"
-- Make so by a link, a user can preview a storyline from other user
-
+- Add translation between english and pt
 - Game -> pixie.js
 
 ## Links
 
 > https://flowbite-svelte.com/icons/outline-icons
+
+> https://whatsthebigdata.com/undress-ai-apps/
 
 ## Getting Started
 
