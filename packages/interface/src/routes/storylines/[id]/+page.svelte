@@ -6,18 +6,16 @@
 	import { aiResponse, aiResponseLoading, currentStoryline, storylines } from "$lib/stores";
 	import { formatTimeAgo } from "$lib/util";
 	import type { Storyline, StorylineChapter } from "@storytelling/types";
-	import { Alert, Drawer, TextPlaceholder } from "flowbite-svelte";
+	import { Drawer, TextPlaceholder } from "flowbite-svelte";
 	import {
 		ArrowsRepeatOutline,
 		CheckCircleOutline,
 		ExclamationCircleOutline,
-		InfoCircleSolid,
 	} from "flowbite-svelte-icons";
-	import { quintOut, sineIn } from "svelte/easing";
-	import { fade, slide } from "svelte/transition";
+	import { sineIn } from "svelte/easing";
+	import { GenerateErrorModal } from "$lib/components";
 
 	let validationError: string;
-	let showAlert = false;
 
 	let hidden = true;
 
@@ -51,17 +49,11 @@
 			});
 			aiResponse.set(data);
 		} catch (error) {
-			showAlert = true;
-
 			if (error instanceof Error) {
 				validationError = error.message;
 			}
 
 			console.error("Error fetching the next story step:", error);
-
-			setTimeout(() => {
-				showAlert = false;
-			}, 3000);
 		}
 	}
 
@@ -101,22 +93,17 @@
 {#if $currentStoryline}
 	<header class="w-full space-y-2">
 		<div class="flex items-center justify-between">
-			<h2 class="text-3xl font-bold text-black">{$currentStoryline.title}</h2>
+			<h2 class="text-2xl lg:text-3xl font-bold text-black">{$currentStoryline.title}</h2>
 			{#if $page.data.user}
 				<button on:click={() => (hidden = false)}>
-					<ArrowsRepeatOutline class="h-[2.5em] w-[2.5em]" />
+					<ArrowsRepeatOutline class="size-8 lg:size-10 cursor-pointer" />
 				</button>
 			{/if}
 		</div>
 		{#if $currentStoryline.status === "ongoing"}
 			<div class="flex gap-4">
 				<span class={statusClasses[$currentStoryline.status]}>{$currentStoryline.status}</span>
-				<svg
-					height="0.5rem"
-					width="0.5rem"
-					xmlns="http://www.w3.org/2000/svg"
-					class="inline-block my-auto"
-				>
+				<svg xmlns="http://www.w3.org/2000/svg" class="inline-block my-auto size-2">
 					<circle r="0.25rem" cx="0.25rem" cy="0.25rem" fill="#6F7378" />
 				</svg>
 				<p class="pt-1 text-xl text-zinc-600 font-semibold">
@@ -180,7 +167,7 @@
 		</Drawer>
 	{/if}
 
-	<section class="space-y-4">
+	<section class="flex flex-col gap-8">
 		{#if $currentStoryline.status === "ongoing"}
 			{#if $page.data.user}
 				{#if $aiResponseLoading}
@@ -213,31 +200,15 @@
 						</div>
 					</div>
 				{:else}
-					<p class="text-red-500 font-semibold text-xl">Failed to load response!</p>
-
-					<button
-						class="font-semibold text-lg px-4 py-2 bg-story-500 text-black rounded-lg w-fit mx-auto"
-						on:click={fetchNextStoryStep}>Retry</button
-					>
-
-					{#if showAlert}
-						<div
-							in:slide={{ delay: 250, duration: 300, easing: quintOut, axis: "x" }}
-							out:fade|local
-						>
-							{#if validationError}
-								<Alert color="red" class="absolute right-12 bottom-12 text-lg" dismissable>
-									<InfoCircleSolid slot="icon" class="w-8 h-8" />
-									<span class="font-semibold">Error!</span>
-									{validationError}
-								</Alert>
-							{/if}
-						</div>
-					{/if}
+					<GenerateErrorModal
+						{fetchNextStoryStep}
+						hasError={$aiResponse ? false : true}
+						errorMessage={validationError}
+					/>
 				{/if}
 			{/if}
 
-			<div class="pb-8">
+			<div>
 				{#each $currentStoryline.chapters.reverse() as storyStep, idx}
 					<div class="flex gap-4 my-4 w-full items-center">
 						<h4 class="text-lg text-zinc-500 font-semibold"
@@ -255,7 +226,7 @@
 			<!-- MEANING STORYLINE IS COMPLETED -->
 
 			<h3 class="pt-1 text-xl text-zinc-600 font-semibold">Follow storyline:</h3>
-			<div class="pb-8">
+			<div>
 				{#each $currentStoryline.chapters.reverse() as storyStep}
 					<div class="space-y-2">
 						<p class="py-2 text-left">{storyStep.description}</p>
