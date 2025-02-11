@@ -65,8 +65,6 @@ determining the ending based on the decisions made.
 
 > https://flowbite-svelte.com/icons/outline-icons
 
-> https://whatsthebigdata.com/undress-ai-apps/
-
 ## Getting Started
 
 1. **Clone the repository**:
