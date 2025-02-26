@@ -54,7 +54,6 @@ determining the ending based on the decisions made.
 - Make the AI return faster
 
 - think about CSR pattern (controller, service, repository)
-- abstract factory??
 
 - Add search bar for storylines
 
@@ -70,18 +69,12 @@ determining the ending based on the decisions made.
 1. **Clone the repository**:
 
    ```bash
-   git clone <repository-url>
-   cd <project-directory>
+   git clone https://github.com/monteiroF14/storytelling 
+   cd storytelling 
    ```
 
-2. **Install dependencies**:
+2. **Run docker container**:
 
    ```bash
-   bun install
-   ```
-
-3. **Run the application**:
-
-   ```bash
-   bun dev
+  docker compose up --build 
    ```
