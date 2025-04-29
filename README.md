@@ -41,25 +41,6 @@ determining the ending based on the decisions made.
 - **SQLite3**: Database for storing user progress and story details.
 - **Hono**: Lightweight framework to handle routes.
 
-## Ideas for Expansion
-
-- Add unit testing
-- CI/CD with testing and linting -> even if doesnt pass the tests I know something broke
-- Apply Clean Architecture and other architectures
-
-- Enhance AI algorithms to predict coherent storylines based on user inputs and
-  ensure that decisions logically impact the story ending.
-- Track user preferences and decision trees to offer tailored story suggestions.
-
-- Make the AI return faster
-
-- think about CSR pattern (controller, service, repository)
-
-- Add search bar for storylines
-
-- Add translation between english and pt
-- Game -> pixie.js
-
 ## Links
 
 > https://flowbite-svelte.com/icons/outline-icons
@@ -76,5 +57,5 @@ determining the ending based on the decisions made.
 2. **Run docker container**:
 
    ```bash
-  docker compose up --build 
+    docker compose up --build 
    ```
